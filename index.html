@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SCA 도시락 시스템</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- 커스텀 테마 스타일 -->
+    <style>
+  :root {
+    --color-bg: #f9fafb;
+    --color-card: #ffffff;
+    --color-primary: #2C3E50;
+    --color-accent: #f39c12;
+    --color-text: #333;
+    --color-border: #dcdcdc;
+    --radius: 0.5rem;
+    --transition: 0.2s ease;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Roboto', 'Segoe UI', sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .container {
+    margin-top: 2rem;
+    padding: 0 1rem;
+  }
+
+  .hidden { display: none !important; }
+
+  /* ───── Navigation ───── */
+  nav {
+    background: var(--color-primary) !important;
+    border-bottom: 1px solid #ccc;
+    box-shadow: none;
+  }
+
+  nav .nav-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+
+  nav .brand-logo {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: white !important;
+  }
+
+  nav .brand-logo img {
+    height: 36px;
+    margin-right: 10px;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  nav .brand-logo img:hover {
+    transform: scale(1.05);
+    transition: transform var(--transition);
+  }
+
+  /* ───── Card ───── */
+  #loginDiv, #empDiv, #adminDiv {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  /* ───── Buttons ───── */
+  .btn {
+    border-radius: 6px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    background-color: var(--color-primary) !important;
+    color: white !important;
+    box-shadow: none;
+    transition: background var(--transition), transform var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+  }
+
+  .btn:hover {
+    background-color: #1f2e3c !important;
+    transform: translateY(-1px);
+  }
+
+  .btn.green { background: #27ae60 !important; }
+  .btn.amber { background: #ffb300 !important; }
+
+  /* ───── Inputs ───── */
+  .input-field {
+    margin-bottom: 1rem;
+  }
+
+  .input-field input,
+  .input-field select {
+    width: 100%;
+    max-width: 280px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+    transition: border-color var(--transition);
+  }
+
+  .input-field input::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+  }
+
+  .input-field input:focus,
+  .input-field select:focus {
+    border-color: var(--color-primary);
+    outline: none;
+  }
+
+  /* ───── Tables ───── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  th, td {
+    padding: 0.75rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  thead {
+    background: #f4f6f8;
+    font-weight: 600;
+  }
+
+  tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+  }
+
+  /* ───── Calendar ───── */
+  #orderCalendar th {
+    background: var(--color-accent);
+    color: white;
+  }
+
+  #orderCalendar td {
+    border: 1px solid var(--color-border);
+    transition: background var(--transition);
+  }
+
+  #orderCalendar td:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  #orderCalendar .count {
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--color-primary);
+  }
+
+  /* ───── Footer ───── */
+  footer {
+    text-align: center;
+    padding: 1rem 0;
+    background: #f4f4f4;
+    color: var(--color-text);
+    font-size: 0.875rem;
+  }
+  </style>
+
+
+</head>
+<body>
+
+
+  <nav>
+    <div class="nav-wrapper">
+  <div class="container">
+    <a href="#!" class="brand-logo" style="display: flex; align-items: center; gap: 10px;">
+      <img
+        src="https://i.ibb.co/shnFdqx/Kakao-Talk-20250520-113526051.png"
+        alt="SCA Logo"
+        style="height: 100%; max-height: 40px; width: auto;"
+      />
+      <span style="font-size: 1.2rem;">SCA 도시락</span>
+    </a>
+        <ul class="right">
+          <li>
+            <a onclick="onLogout()">
+              <i class="material-icons">exit_to_app</i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+
+  <div class="container">
+    <!-- 로그인 Card -->
+    <div id="loginDiv">
+      <h5>🔐 로그인</h5>
+      <div class="input-field">
+        <input id="loginId" type="text" placeholder="UserID">
+      </div>
+      <div class="input-field">
+        <input id="loginPw" type="password" placeholder="Password">
+      </div>
+      <!-- 여기 버튼에 색상 class를 붙여주세요 -->
+      <button class="btn blue" onclick="onLogin()">로그인</button>
+      <p class="red-text" id="loginMsg"></p>
+    </div>
+
+    <!-- 직원 화면 -->
+    <div id="empDiv" class="hidden">
+      <h5>📝 직원 주문 화면</h5>
+      <p>안녕하세요, <strong id="empName"></strong>님</p>
+
+      <div class="row">
+        <div class="input-field col s6">
+          <input id="empOrderDate" type="date">
+          <label for="empOrderDate" class="active">주문 날짜</label>
+        </div>
+        <div class="input-field col s6">
+          <select id="empVendor"><option disabled selected>업체 선택</option></select>
+          <label>도시락 업체</label>
+        </div>
+        <div class="col s6 valign-wrapper">
+          <button id="empBtn" class="btn waves-effect waves-light">주문하기</button>
+        </div>
+      </div>
+
+      <h6>월별 주문 내역</h6>
+      <div class="row">
+        <div class="input-field col s6">
+          <input id="monthPicker" type="month">
+          <label for="monthPicker" class="active">월 선택</label>
+        </div>
+        <div class="col s6">
+          <button class="btn" onclick="loadByMonth()">조회</button>
+        </div>
+      </div>
+
+      <table class="highlight">
+        <thead>
+          <tr><th>날짜</th><th>UserID</th><th>상태</th><th>액션</th></tr>
+        </thead>
+        <tbody id="ordersContainer"></tbody>
+      </table>
+    </div>
+
+    <!-- 관리자 화면 -->
+    <div id="adminDiv" class="hidden">
+      <h5>🔧 관리자 대시보드</h5>
+      <p>안녕하세요, 관리자 <strong id="adminName"></strong>님</p>
+      <ul class="collapsible">
+
+        <!-- 전체 주문 조회 -->
+<li>
+  <div class="collapsible-header"><i class="material-icons">shopping_cart</i>전체 주문 조회</div>
+  <div class="collapsible-body">
+    <div class="input-field">
+      <input id="filterName" type="text"><label for="filterName">Name 검색</label>
+    </div>
+    <div class="input-field">
+      <input id="startDate" type="date"><label for="startDate">시작일</label>
+    </div>
+    <div class="input-field">
+      <input id="endDate" type="date"><label for="endDate">종료일</label>
+    </div>
+    <button class="btn" onclick="loadAll()">조회</button>
+    <!-- CSV 다운로드 버튼 -->
+    <button class="btn green" style="margin-left:8px" onclick="downloadCSV()">다운 : 원본</button>
+    <button class="btn blue" style="margin-left:8px" onclick="downloadSummaryCSV()">다운 : 요약</button>
+    <table class="highlight" style="margin-top:16px">
+      <thead>
+        <tr><th>날짜</th><th>Name</th><th>상태</th><th>액션</th></tr>
+      </thead>
+      <tbody id="adminContainer"></tbody>
+    </table>
+  </div>
+</li>
+
+
+        <!-- 3) 일괄 주문 -->
+        <li>
+          <div class="collapsible-header"><i class="material-icons">group_add</i>직원 일괄 주문</div>
+          <div class="collapsible-body">
+            <div class="input-field">
+              <input id="bulkDate" type="date"><label for="bulkDate">날짜</label>
+            </div>
+            <div class="input-field">
+              <select multiple id="employeeSelect"><option disabled>직원 선택</option></select>
+              <label>직원 선택</label>
+            </div>
+            <button class="btn" onclick="bulkOrder()">일괄 주문</button>
+            <p id="bulkMsg" class="green-text"></p>
+          </div>
+        </li>
+
+        <!-- 4) 오늘 주문 건수 -->
+        <li>
+          <div class="collapsible-header"><i class="material-icons">assessment</i>오늘 주문 건수</div>
+          <div class="collapsible-body">
+            <p>오늘 주문 수량: <strong id="todayCount">0</strong> 건</p>
+            <button class="btn" onclick="loadTodayCount()">새로고침</button>
+            <table class="highlight" style="margin-top:12px;">
+              <thead><tr><th>VendorID</th><th>Name</th><th>Count</th></tr></thead>
+              <tbody id="vendorTodayBody"></tbody>
+            </table>
+          </div>
+        </li>
+
+        <!-- 4-1) 업체별 집계 -->
+        <li>
+          <div class="collapsible-header"><i class="material-icons">storefront</i>업체별 집계</div>
+          <div class="collapsible-body">
+            <div class="row">
+              <div class="input-field col s4">
+                <input id="vendorStart" type="date"><label for="vendorStart">시작일</label>
+              </div>
+              <div class="input-field col s4">
+                <input id="vendorEnd" type="date"><label for="vendorEnd">종료일</label>
+              </div>
+              <div class="input-field col s4">
+                <select id="vendorFilter"><option value="">전체 벤더</option></select>
+                <label>벤더 선택(선택 시 사용자별 상세)</label>
+              </div>
+            </div>
+            <div class="row">
+              <button class="btn" onclick="loadVendorSummary()">조회</button>
+              <button class="btn green" style="margin-left:8px" onclick="downloadVendorCSV()">CSV</button>
+              <button class="btn amber" style="margin-left:8px" onclick="downloadUserVendorCSV()">사용자-업체 CSV</button>
+              <button class="btn" style="margin-left:8px" onclick="downloadUserVendorPivotCSV()">사용자별 업체 피벗 CSV</button>
+            </div>
+            <table class="highlight" style="margin-top:12px;">
+              <thead id="vendorSummaryHead"></thead>
+              <tbody id="vendorSummaryBody"></tbody>
+            </table>
+          </div>
+        </li>
+
+        <!-- 5) 직원 계정 관리 -->
+        <li>
+          <div class="collapsible-header"><i class="material-icons">person</i>직원 계정 관리</div>
+          <div class="collapsible-body">
+            <form id="addForm">
+              <div class="input-field">
+                <input id="newId" type="text"><label for="newId">UserID</label>
+              </div>
+              <div class="input-field">
+                <input id="newName" type="text"><label for="newName">Name</label>
+              </div>
+              <div class="input-field">
+                <input id="newPw" type="password"><label for="newPw">Password</label>
+              </div>
+              <div class="input-field">
+                <select id="newRole">
+                  <option value="employee">employee</option>
+                  <option value="admin">admin</option>
+                </select>
+                <label>Role</label>
+              </div>
+              <button class="btn" type="submit">직원 추가</button>
+            </form>
+            <table class="highlight">
+              <thead><tr><th>UserID</th><th>Name</th><th>Role</th><th>액션</th></tr></thead>
+              <tbody id="empList"></tbody>
+            </table>
+          </div>
+        </li>
+
+        <!-- 5-1) 도시락 업체 관리 -->
+        <li>
+          <div class="collapsible-header"><i class="material-icons">store</i>도시락 업체 관리</div>
+          <div class="collapsible-body">
+            <div class="row">
+              <div class="input-field col s8 m6">
+                <input id="vendorName" type="text"><label for="vendorName">업체명</label>
+              </div>
+              <div class="col s4 m6 valign-wrapper" style="margin-top:12px;">
+                <button class="btn" onclick="addVendorUI()">업체 추가</button>
+              </div>
+            </div>
+            <table class="highlight" style="margin-top:8px;">
+              <thead><tr><th>VendorID</th><th>Name</th><th>액션</th></tr></thead>
+              <tbody id="vendorList"></tbody>
+            </table>
+          </div>
+        </li>
+
+        <!-- 6) 달력 주문 현황 -->
+        <li>
+          <div class="collapsible-header"><i class="material-icons">calendar_today</i>달력 주문 현황</div>
+          <div class="collapsible-body">
+            <div class="row">
+              <div class="input-field col s6">
+                <input id="calendarMonth" type="month">
+                <label for="calendarMonth" class="active">월 선택</label>
+              </div>
+              <div class="col s6 valign-wrapper">
+                <button class="btn" onclick="loadCalendar()">불러오기</button>
+              </div>
+            </div>
+            <div id="orderCalendar"></div>
+          </div>
+        </li>
+
+      </ul>
+    </div>
+
+  </div>
+
+
+ <!-- 푸터 -->
+<footer>
+  <div class="container">
+    Created by Yeulyee Kim
+  </div>
+</footer>
+
+
+  <!-- Materialize JS -->
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=>{ M.AutoInit(); });
+
+    let currentUser = null;
+
+    // 로그아웃: 항상 로그인 화면으로 복귀
+  function onLogout() {
+    // 세션 사용자 정보 삭제
+    currentUser = null;
+
+    // 로그인 화면 보이기
+    document.getElementById('loginDiv').classList.remove('hidden');
+
+    // 직원/관리자 화면 숨기기
+    document.getElementById('empDiv').classList.add('hidden');
+    document.getElementById('adminDiv').classList.add('hidden');
+
+    // 로그인 폼 초기화
+    document.getElementById('loginId').value = '';
+    document.getElementById('loginPw').value = '';
+    document.getElementById('loginMsg').textContent = '';
+
+    // Materialize 폼 상태 리셋
+    M.updateTextFields();
+  }
+
+    // 로그인
+    function onLogin() {
+      const id = document.getElementById('loginId').value;
+      const pw = document.getElementById('loginPw').value;
+      google.script.run
+        .withSuccessHandler(handleLogin)
+        .withFailureHandler(e=>M.toast({html:e.message}))
+        .authenticateUser(id,pw);
+    }
+    function handleLogin(res) {
+      if (!res) {
+        document.getElementById('loginMsg').textContent = '로그인 실패';
+        return;
+      }
+      currentUser = res;
+      document.getElementById('loginDiv').classList.add('hidden');
+      if (res.role === 'employee') {
+        document.getElementById('empName').textContent = res.name;
+        document.getElementById('empDiv').classList.remove('hidden');
+        M.updateTextFields();
+        initEmployee();
+      } else {
+        document.getElementById('adminName').textContent = res.name;
+        document.getElementById('adminDiv').classList.remove('hidden');
+        M.updateTextFields();
+        initAdmin();
+      }
+    }
+
+    // ───────────────── 직원 초기화 ─────────────────
+    function initEmployee() {
+      const today = new Date().toISOString().slice(0,10);
+      document.getElementById('empOrderDate').value = today;
+      document.getElementById('monthPicker').value   = today.substr(0,7);
+      M.updateTextFields();
+
+      updateEmpButton(today);
+      loadByMonth();
+      loadVendorsForEmp();
+      document.getElementById('empOrderDate')
+        .addEventListener('change', e => updateEmpButton(e.target.value));
+      // 직원 화면: 벤더 변경 시 최근 선택 저장
+      const sel = document.getElementById('empVendor');
+      sel.addEventListener('change', () => {
+        if (!currentUser) return;
+        const key = `lastVendor_${currentUser.userId}`;
+        const val = sel.value || '';
+        try { localStorage.setItem(key, val); } catch (e) {}
+      });
+    }
+    function updateEmpButton(date) {
+      google.script.run
+        .withSuccessHandler(list => {
+          const btn = document.getElementById('empBtn');
+          const has = list.some(o=>o.Status==='ordered');
+          btn.textContent = has ? '취소하기' : '주문하기';
+          btn.onclick     = has ? ()=>cancelEmpOrder(date) : ()=>orderEmp(date);
+        })
+        .getMyOrdersInRange(date,date,currentUser.userId);
+    }
+    // 주문하기
+function orderEmp(date) {
+  // Optimistic UI: 버튼 즉시 반영 및 비활성화
+  const btn = document.getElementById('empBtn');
+  btn.textContent = '취소하기';
+  btn.onclick     = null;
+  btn.disabled    = true;
+  M.toast({html:'주문 처리 중...'});
+  // 벤더 선택 확인
+  const sel = document.getElementById('empVendor');
+  const vendorId = sel && sel.value;
+  if (!vendorId || sel.selectedIndex === 0) {
+    btn.disabled = false;
+    updateEmpButton(date);
+    return M.toast({html:'업체를 선택하세요'});
+  }
+  // 서버 호출
+  google.script.run
+    .withSuccessHandler(res => {
+      M.toast({html:'주문되었습니다'});
+      btn.disabled = false;
+      loadByMonth();
+    })
+    .withFailureHandler(e => {
+      M.toast({html:e.message});
+      btn.disabled = false;
+      loadByMonth();
+    })
+    .placeOrderWithVendor(date, currentUser.userId, vendorId);
+  // 최근 선택한 벤더 저장
+  try { if (currentUser) localStorage.setItem(`lastVendor_${currentUser.userId}`, vendorId); } catch (e) {}
+}
+
+    // 취소하기
+function cancelEmpOrder(date) {
+  // Optimistic UI: 버튼 즉시 반영 및 비활성화
+  const btn = document.getElementById('empBtn');
+  btn.textContent = '주문하기';
+  btn.onclick     = null;
+  btn.disabled    = true;
+  M.toast({html:'취소 처리 중...'});
+  // 서버 호출
+  google.script.run
+    .withSuccessHandler(res => {
+      M.toast({html:'취소되었습니다'});
+      btn.disabled = false;
+      loadByMonth();
+    })
+    .withFailureHandler(e => {
+      M.toast({html:e.message});
+      btn.disabled = false;
+      loadByMonth();
+    })
+    .cancelOrder(date, currentUser.userId);
+}
+    function loadByMonth() {
+      const ym = document.getElementById('monthPicker').value;
+      if (!ym) return;
+      const [y,m] = ym.split('-');
+      const start = `${ym}-01`;
+      const end   = new Date(y,m,0).toISOString().slice(0,10);
+      google.script.run
+        .withSuccessHandler(ords => {
+          const tb = document.getElementById('ordersContainer');
+          tb.innerHTML = '';
+          if (!ords.length) {
+            tb.innerHTML = '<tr><td colspan="4">주문 내역이 없습니다.</td></tr>';
+      return;
+    }
+          const today = new Date().toISOString().slice(0,10);
+          ords.forEach(o => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${o.Date}</td>
+              <td>${o.UserID}</td>
+              <td>${o.Status==='ordered'?'주문':'취소'}</td>
+              <td>${
+                o.Status==='ordered' && o.Date>=today
+                  ? `<button class="btn-flat red-text" onclick="cancelEmpOrder('${o.Date}')">취소</button>`
+                  : ''
+              }</td>`;
+            tb.appendChild(tr);
+          });
+        })
+        .getMyOrdersInRange(start,end,currentUser.userId);
+    }
+
+    // ───────────────── 관리자 초기화 ─────────────────
+
+        function initAdmin() {
+      const today = new Date().toISOString().slice(0,10);
+      // 날짜 관련 필드만 오늘 날짜로 초기화 (cutoffDate 제거)
+      ['startDate','endDate','bulkDate','calendarMonth']
+        .forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = today;
+        });
+      // 업체 집계 기본 날짜
+      ['vendorStart','vendorEnd'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = today;
+      });
+      // Name 검색 필드는 빈 값으로 초기화
+      document.getElementById('filterName').value = '';
+      M.updateTextFields();
+      loadAll();
+      loadEmployees();
+      loadTodayCount();
+      loadCalendar();
+      loadVendors();
+      loadVendorsForSummary();
+      document.getElementById('bulkDate')
+        .addEventListener('change', loadEmployees);
+    }
+
+
+    function loadAll() {
+      const s = document.getElementById('startDate').value;
+      const e = document.getElementById('endDate').value;
+      const nameFilter = document.getElementById('filterName').value.trim();
+      google.script.run
+        .withSuccessHandler(data=>{
+          const tb = document.getElementById('adminContainer');
+          tb.innerHTML = '';
+          if (!data.length) {
+            tb.innerHTML = '<tr><td colspan="4">내역이 없습니다.</td></tr>';
+      return;
+    }
+          data.forEach(o=>{
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${o.Date}</td>
+              <td>${o.Name}</td>
+              <td>${o.Status==='ordered'?'주문':'취소'}</td>
+              <td>
+                ${o.Status==='ordered'
+                  ? `<button class="btn-flat red-text" onclick="cancelAdminOrder('${o.Date}','${o.UserID}')">취소</button>`
+                  : ''}
+              </td>`;
+            tb.appendChild(tr);
+          });
+        })
+        .getAllOrdersFiltered(s, e, nameFilter);
+    }
+    function loadEmployees() {
+      google.script.run
+        .withSuccessHandler(list=>{
+          const sel = document.getElementById('employeeSelect');
+          sel.innerHTML = '<option disabled>직원 선택</option>';
+          list.forEach(u=>{
+            const opt = document.createElement('option');
+            opt.value = u.userId; opt.text = `${u.name}(${u.userId})`;
+            sel.appendChild(opt);
+          });
+          M.FormSelect.init(sel);
+        })
+        .getEmployees();
+    }
+
+    // 직원 화면용: 업체 목록 로드
+    function loadVendorsForEmp() {
+      const sel = document.getElementById('empVendor');
+      if (!sel) return;
+      // 재초기화를 위해 기존 인스턴스 제거
+      try { const inst = M.FormSelect.getInstance(sel); if (inst) inst.destroy(); } catch (e) {}
+      google.script.run
+        .withSuccessHandler(list => {
+          sel.innerHTML = '<option disabled selected>업체 선택</option>';
+          (list||[]).forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.vendorId;
+            opt.text  = `${v.name} (${v.vendorId})`;
+            sel.appendChild(opt);
+          });
+          M.FormSelect.init(sel);
+          if (!list || !list.length) {
+            M.toast({html:'등록된 업체가 없습니다. 관리자에서 업체를 추가하세요.'});
+          }
+          // 최근 선택한 벤더 자동 선택
+          if (currentUser) {
+            const key = `lastVendor_${currentUser.userId}`;
+            let last = '';
+            try { last = localStorage.getItem(key) || ''; } catch (e) {}
+            if (last) {
+              const found = Array.from(sel.options).some(o => o.value === last);
+              if (found) {
+                sel.value = last;
+                // 값 변경 후 재초기화
+                try { const inst2 = M.FormSelect.getInstance(sel); if (inst2) inst2.destroy(); } catch (e) {}
+                M.FormSelect.init(sel);
+              }
+            }
+          }
+        })
+        .getVendors();
+    }
+
+    // ───────────────── 업체 관리 ─────────────────
+    function loadVendors() {
+      google.script.run
+        .withSuccessHandler(list => {
+          const tb = document.getElementById('vendorList');
+          tb.innerHTML = '';
+          if (!list || !list.length) {
+            tb.innerHTML = '<tr><td colspan="3">등록된 업체가 없습니다.</td></tr>';
+            return;
+          }
+          list.forEach(v => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${v.vendorId}</td><td>${v.name}</td>
+                            <td>
+                              <button class="btn amber" onclick="editVendor('${v.vendorId}','${v.name.replace(/'/g,"\\'")}')">수정</button>
+                              <button class="btn red" style="margin-left:6px" onclick="deleteVendorUI('${v.vendorId}')">삭제</button>
+                            </td>`;
+            tb.appendChild(tr);
+          });
+        })
+        .getVendors();
+    }
+    function loadVendorsForSummary() {
+      const sel = document.getElementById('vendorFilter');
+      if (!sel) return;
+      google.script.run
+        .withSuccessHandler(list => {
+          sel.innerHTML = '<option value="">전체 벤더</option>';
+          (list||[]).forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.vendorId;
+            opt.text  = `${v.name} (${v.vendorId})`;
+            sel.appendChild(opt);
+          });
+          M.FormSelect.init(sel);
+        })
+        .getVendors();
+    }
+
+    function loadVendorSummary() {
+      const s = document.getElementById('vendorStart').value;
+      const e = document.getElementById('vendorEnd').value;
+      const vid = document.getElementById('vendorFilter').value;
+      const head = document.getElementById('vendorSummaryHead');
+      const body = document.getElementById('vendorSummaryBody');
+      body.innerHTML = '';
+      if (!vid) {
+        // 전체 벤더 집계
+        google.script.run
+          .withSuccessHandler(rows => {
+            head.innerHTML = '<tr><th>VendorID</th><th>Name</th><th>Count</th></tr>';
+            if (!rows || !rows.length) { body.innerHTML = '<tr><td colspan="3">데이터 없음</td></tr>'; return; }
+            rows.forEach(r => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${r.VendorID}</td><td>${r.VendorName}</td><td>${r.Count}</td>`;
+              body.appendChild(tr);
+            });
+          })
+          .getVendorCountsForRange(s, e);
+      } else {
+        // 특정 벤더 사용자별 상세
+        google.script.run
+          .withSuccessHandler(rows => {
+            head.innerHTML = '<tr><th>UserID</th><th>Name</th><th>Count</th></tr>';
+            if (!rows || !rows.length) { body.innerHTML = '<tr><td colspan="3">데이터 없음</td></tr>'; return; }
+            rows.forEach(r => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${r.UserID}</td><td>${r.Name}</td><td>${r.Count}</td>`;
+              body.appendChild(tr);
+            });
+          })
+          .getVendorUserCountsForRange(s, e, vid);
+      }
+    }
+
+    function downloadVendorCSV() {
+      const s = document.getElementById('vendorStart').value;
+      const e = document.getElementById('vendorEnd').value;
+      const vid = document.getElementById('vendorFilter').value;
+      if (!vid) {
+        google.script.run.withSuccessHandler(rows => {
+          if (!rows || !rows.length) { return M.toast({html:'데이터 없음'}); }
+          const header = ['VendorID','Name','Count'];
+          let csv = '\uFEFF' + header.join(',') + '\r\n';
+          rows.forEach(r => { csv += [`"${r.VendorID}"`,`"${r.VendorName}"`,r.Count].join(',') + '\r\n'; });
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url  = URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href = url; a.download = `vendor_counts_${s}_to_${e}.csv`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        }).getVendorCountsForRange(s,e);
+      } else {
+        google.script.run.withSuccessHandler(rows => {
+          if (!rows || !rows.length) { return M.toast({html:'데이터 없음'}); }
+          const header = ['UserID','Name','Count'];
+          let csv = '\uFEFF' + header.join(',') + '\r\n';
+          rows.forEach(r => { csv += [`"${r.UserID}"`,`"${r.Name}"`,r.Count].join(',') + '\r\n'; });
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url  = URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href = url; a.download = `vendor_${vid}_users_${s}_to_${e}.csv`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        }).getVendorUserCountsForRange(s,e,vid);
+      }
+    }
+
+    function downloadUserVendorCSV() {
+      const s = document.getElementById('vendorStart').value;
+      const e = document.getElementById('vendorEnd').value;
+      google.script.run.withSuccessHandler(rows => {
+        if (!rows || !rows.length) { return M.toast({html:'데이터 없음'}); }
+        const header = ['UserID','Name','VendorID','VendorName','Count'];
+        let csv = '\uFEFF' + header.join(',') + '\r\n';
+        rows.forEach(r => {
+          csv += [r.UserID, r.Name, r.VendorID, r.VendorName, r.Count]
+            .map(v => '"' + String(v).replace(/"/g,'""') + '"')
+            .join(',') + '\r\n';
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = `user_vendor_${s}_to_${e}.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      }).getUserVendorCountsForRange(s, e);
+    }
+
+    function downloadUserVendorPivotCSV() {
+      const s = document.getElementById('vendorStart').value;
+      const e = document.getElementById('vendorEnd').value;
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res || !res.header || !res.rows) { return M.toast({html:'데이터 없음'}); }
+          const header = res.header;
+          const rows   = res.rows;
+          let csv = '\uFEFF' + header.join(',') + '\r\n';
+          rows.forEach(r => {
+            csv += r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',') + '\r\n';
+          });
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href = url; a.download = `user_vendor_pivot_${s}_to_${e}.csv`;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        })
+        .getUserVendorPivotForRange(s, e);
+    }
+    function addVendorUI() {
+      const name = document.getElementById('vendorName').value.trim();
+      if (!name) { return M.toast({html:'업체명을 입력하세요'}); }
+      google.script.run
+        .withSuccessHandler(() => {
+          M.toast({html:'업체가 추가되었습니다'});
+          document.getElementById('vendorName').value = '';
+          M.updateTextFields();
+          loadVendors();
+        })
+        .withFailureHandler(err => M.toast({html: err.message}))
+        .addVendorAuto(name);
+    }
+
+    function editVendor(vendorId, currentName) {
+      const newName = prompt(`업체명 수정 (${vendorId})`, currentName || '');
+      if (newName == null) return; // 취소
+      const trimmed = newName.trim();
+      if (!trimmed) return M.toast({html:'업체명을 입력하세요'});
+      google.script.run
+        .withSuccessHandler(()=>{ M.toast({html:'수정되었습니다'}); loadVendors(); })
+        .withFailureHandler(err=> M.toast({html: err.message}))
+        .updateVendorName(vendorId, trimmed);
+    }
+
+    function deleteVendorUI(vendorId) {
+      if (!confirm(`업체(${vendorId})를 삭제하시겠습니까?`)) return;
+      google.script.run
+        .withSuccessHandler(()=>{ M.toast({html:'삭제되었습니다'}); loadVendors(); })
+        .withFailureHandler(err=>{
+          // 참조 오류인 경우 강제 삭제 확인
+          const msg = err && err.message ? err.message : String(err);
+          if (msg.indexOf('참조하는 주문') !== -1) {
+            if (confirm('해당 업체를 참조하는 주문이 있습니다. 매핑을 함께 삭제하시겠습니까?')) {
+              google.script.run
+                .withSuccessHandler(()=>{ M.toast({html:'강제 삭제되었습니다'}); loadVendors(); })
+                .withFailureHandler(e2=> M.toast({html: e2.message}))
+                .deleteVendor(vendorId, true);
+            }
+          } else {
+            M.toast({html: msg});
+          }
+        })
+        .deleteVendor(vendorId, false);
+    }
+    function bulkOrder() {
+      const date = document.getElementById('bulkDate').value;
+      const sel  = document.getElementById('employeeSelect');
+      const ids  = Array.from(sel.selectedOptions).map(o=>o.value);
+      google.script.run
+        .withSuccessHandler(res=>{
+          const ok = res.filter(r=>r.success).length;
+          M.toast({html:`${ok}건 주문 처리`});
+          loadTodayCount();
+        })
+        .bulkPlaceOrder(date,ids);
+    }
+    function loadTodayCount() {
+      const today = new Date().toISOString().slice(0,10);
+      google.script.run
+        .withSuccessHandler(res => {
+          document.getElementById('todayCount').textContent = (res && res.total) || 0;
+          const tb = document.getElementById('vendorTodayBody');
+          tb.innerHTML = '';
+          const rows = (res && res.vendors) || [];
+          if (!rows.length) {
+            tb.innerHTML = '<tr><td colspan="3">데이터 없음</td></tr>';
+            return;
+          }
+          rows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${r.VendorID}</td><td>${r.VendorName}</td><td>${r.Count}</td>`;
+            tb.appendChild(tr);
+          });
+        })
+        .getTodayOverview(today);
+    }
+
+
+
+function downloadCSV() {
+  const s = document.getElementById('startDate').value;
+  const e = document.getElementById('endDate').value;
+  const nameFilter = document.getElementById('filterName').value.trim();
+
+  // 1️⃣ 요약 시트(“Summary”) 생성/갱신
+  google.script.run
+    .withSuccessHandler(function() {
+      // 2️⃣ 갱신이 끝나면 기존 CSV 다운로드 로직 실행
+      google.script.run
+        .withSuccessHandler(function(data) {
+          if (!data.length) {
+            return M.toast({html:'다운로드할 주문 데이터가 없습니다.'});
+          }
+          const header = ['날짜','Name','상태'];
+          const rows   = data.map(o=>[
+            o.Date,
+            o.Name,
+            o.Status==='ordered' ? '주문' : '취소'
+          ]);
+
+          // CSV 문자열 만들기 (UTF-8 BOM 포함)
+          let csv = '\uFEFF' + header.join(',') + '\r\n';
+          rows.forEach(r=>{
+            csv += r.map(v => `"${v.replace(/"/g,'""')}"`).join(',') + '\r\n';
+          });
+
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href     = url;
+          a.download = `orders_${s}_to_${e}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        })
+        .getAllOrdersFiltered(s, e, nameFilter);
+    })
+    .createOrderSummarySheet();  // Summary 시트 갱신 호출
+}
+
+  function downloadSummaryCSV() {
+    // 서버에서 요약 데이터(JSON) 받아오기
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (!data.length) {
+          return M.toast({html:'다운로드할 요약 데이터가 없습니다.'});
+        }
+        // 헤더
+        const header = ['UserID','Name','Count'];
+        // CSV 문자열 (UTF-8 BOM 포함)
+        let csv = '\uFEFF' + header.join(',') + '\r\n';
+        data.forEach(row => {
+          csv += [
+            row.UserID,
+            row.Name,
+            row.Count
+          ].map(v => `"${String(v).replace(/"/g,'""')}"`)
+           .join(',') + '\r\n';
+        });
+
+        // Blob 생성 → 다운로드
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `order_summary.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      })
+      .getOrderSummary();  // ← 새로 만든 서버 함수 호출
+  }
+
+
+    // 관리자 달력 데이터 로드
+    function loadCalendar() {
+      const ym = document.getElementById('calendarMonth').value;
+      if (!ym) return;
+      const [y,m] = ym.split('-');
+      const start = `${ym}-01`;
+      const end   = new Date(y, m, 0).toISOString().slice(0,10);
+      google.script.run
+        .withSuccessHandler(drawCalendar)
+        .getOrderCountsForRange(start, end);
+    }
+    function drawCalendar(data) {
+      const ym = document.getElementById('calendarMonth').value;
+      const [y,m] = ym.split('-');
+      const first = new Date(y, m-1, 1);
+      const lastDay = new Date(y, m, 0).getDate();
+      const startWeek = first.getDay();
+      const countMap = {};
+      data.forEach(o=> countMap[o.date] = o.count);
+
+      let html = '<table><thead><tr>'
+        + ['일','월','화','수','목','금','토'].map(d=>`<th>${d}</th>`).join('')
+        + '</tr></thead><tbody><tr>';
+      for (let i=0; i<startWeek; i++) html += '<td></td>';
+      for (let day=1; day<=lastDay; day++) {
+        const ds = `${ym}-${String(day).padStart(2,'0')}`;
+        const cnt = countMap[ds]||0;
+        html += `<td><div>${day}</div><div class="count">${cnt}건</div></td>`;
+        if ((startWeek + day) % 7 === 0 && day!==lastDay) html += '</tr><tr>';
+      }
+      const tail = (startWeek + lastDay) % 7;
+      if (tail !== 0) for (let i=tail; i<7; i++) html += '<td></td>';
+      html += '</tr></tbody></table>';
+      document.getElementById('orderCalendar').innerHTML = html;
+    }
+
+    function cancelAdminOrder(date, userId) {
+      google.script.run
+        .withSuccessHandler(()=>{
+          M.toast({html:'관리자 취소 완료'});
+          loadAll();
+          loadCalendar();
+          loadTodayCount();
+        })
+        .withFailureHandler(e=>M.toast({html:e.message}))
+        .adminCancelOrder(date, userId);
+    }
+
+    // 직원 계정 리스트 로드
+    // —————————————————————————————————————————————————————————————————————————
+  // 직원 목록 UI 전체 갱신 함수
+  // 리스트(list)를 받아서 <select>와 <table>을 동시에 업데이트
+  function updateEmployeeUI(list) {
+    // 1) 직원 선택용 select 재구성
+    const sel = document.getElementById('employeeSelect');
+    sel.innerHTML = '<option disabled>직원 선택</option>';
+    list.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.userId;
+      opt.text  = `${u.name} (${u.userId})`;
+      sel.appendChild(opt);
+    });
+    M.FormSelect.init(sel);
+
+    // 2) 직원 테이블 재구성
+    const tb = document.getElementById('empList');
+    tb.innerHTML = '';
+    list.forEach(u => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${u.userId}</td>
+        <td>${u.name}</td>
+        <td>${u.role}</td>
+        <td>
+          <button class="btn-flat red-text" onclick="deleteEmployee('${u.userId}')">
+            삭제
+          </button>
+        </td>`;
+      tb.appendChild(tr);
+    });
+  }
+
+  // —————————————————————————————————————————————————————————————————————————
+  // 서버에서 직원 목록을 가져와 UI 갱신
+  function loadEmployees() {
+    google.script.run
+      .withSuccessHandler(updateEmployeeUI)
+      .getEmployees();
+  }
+
+  // —————————————————————————————————————————————————————————————————————————
+  // 직원 추가 폼 핸들러
+  document.getElementById('addForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const id = document.getElementById('newId').value.trim();
+    const nm = document.getElementById('newName').value.trim();
+    const pw = document.getElementById('newPw').value;
+    const rl = document.getElementById('newRole').value;
+
+    google.script.run
+      .withSuccessHandler(() => {
+        M.toast({ html: '직원 추가되었습니다' });
+        // 추가 성공 후 최신 목록으로 UI 전체 갱신
+        loadEmployees();
+        // 폼 초기화
+        document.getElementById('newId').value = '';
+        document.getElementById('newName').value = '';
+        document.getElementById('newPw').value = '';
+        document.getElementById('newRole').selectedIndex = 0;
+        M.updateTextFields();
+      })
+      .withFailureHandler(err => {
+        M.toast({ html: err.message });
+      })
+      .addEmployee(id, nm, pw, rl);
+  });
+
+  // —————————————————————————————————————————————————————————————————————————
+  // 직원 삭제 함수
+  function deleteEmployee(userId) {
+    if (!confirm('삭제하시겠습니까?')) return;
+    google.script.run
+      .withSuccessHandler(() => {
+        M.toast({ html: '삭제되었습니다' });
+        // 삭제 후 최신 목록으로 UI 전체 갱신
+        loadEmployees();
+      })
+      .withFailureHandler(err => {
+        M.toast({ html: err.message });
+      })
+      .deleteEmployee(userId);
+  }
+
+  // —————————————————————————————————————————————————————————————————————————
+  // 페이지 로드 시 최초 1회 목록 불러오기
+  document.addEventListener('DOMContentLoaded', () => {
+    loadEmployees();
+  });
+
+    
+function loadCurrentCutoff() {
+  const d = document.getElementById('cutoffDate').value;
+  google.script.run
+    .withSuccessHandler(t => {
+      document.getElementById('currentCutoff').textContent =
+        t ? `현재 마감: ${t}` : '미설정 (기본 10:30)';
+    })
+    .getCutoffTime(d);
+}
+
+  </script>
+
+</body>
+</html>

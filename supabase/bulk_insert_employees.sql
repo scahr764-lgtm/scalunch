@@ -1,0 +1,47 @@
+-- 직원 계정 일괄 등록 SQL
+-- 비밀번호: 1234 (모든 계정 공통)
+-- 역할: employee
+
+INSERT INTO users (email, name, password, role) VALUES
+('yeulyee', '김열이', '1234', 'employee'),
+('tom1221', '한태욱', '1234', 'employee'),
+('gina125', '김현진', '1234', 'employee'),
+('mkson', '손문기', '1234', 'employee'),
+('jhpark', '박준홍', '1234', 'employee'),
+('yskim', '김용신', '1234', 'employee'),
+('sykim', '김소영', '1234', 'employee'),
+('dskim', '김대석', '1234', 'employee'),
+('inlee', '이인', '1234', 'employee'),
+('ejkim', '김은주', '1234', 'employee'),
+('yejeon', '전예은', '1234', 'employee'),
+('bhshin', '신보현', '1234', 'employee'),
+('shjung', '정성호', '1234', 'employee'),
+('mjshin', '신문재', '1234', 'employee'),
+('jslim', '임정숙', '1234', 'employee'),
+('jhcho', '조준희', '1234', 'employee'),
+('ghkwon', '권근형', '1234', 'employee'),
+('jylee', '이지영', '1234', 'employee'),
+('ssjeong', '정석선', '1234', 'employee'),
+('cyshin', '신창엽', '1234', 'employee'),
+('hkjung', '정형권', '1234', 'employee'),
+('skuh', '어성길', '1234', 'employee'),
+('kspark', '박건석', '1234', 'employee'),
+('yjseong', '성영제', '1234', 'employee'),
+('bjjung', '정병조', '1234', 'employee'),
+('sbchoi', '최성배', '1234', 'employee'),
+('ycjang', '장영철', '1234', 'employee'),
+('gtkoo', '구경태', '1234', 'employee'),
+('hjcheon', '천희주', '1234', 'employee'),
+('mkpark', '박민규', '1234', 'employee'),
+('iron', '김철', '1234', 'employee'),
+('ihchoi', '최인희', '1234', 'employee'),
+('shhwang', '황성현', '1234', 'employee'),
+('dhkim', '김도형', '1234', 'employee'),
+('ehlee', '이을휘', '1234', 'employee'),
+('bsyu', '유병선', '1234', 'employee'),
+('dbkim', '김도범', '1234', 'employee'),
+('wsbyun', '변우섭', '1234', 'employee'),
+('yhkim', '김용희', '1234', 'employee'),
+('jskim', '김재석', '1234', 'employee')
+ON CONFLICT (email) DO NOTHING;
+
