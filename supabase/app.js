@@ -1310,9 +1310,17 @@ async function loadReports() {
       .eq('status', 'ordered');
     
     if (ordersError) {
+      console.error('ordersError:', ordersError);
       toast('주문 데이터를 불러오는데 실패했습니다', 'error');
       setLoading(searchReports, false);
       return;
+    }
+    
+    // 디버깅: 주문 데이터 확인
+    console.log('Supabase orders 조회 결과:', orders);
+    console.log('첫 번째 주문 샘플:', orders && orders.length > 0 ? orders[0] : '없음');
+    if (orders && orders.length > 0 && !orders[0].date) {
+      console.error('첫 번째 주문에 date 필드가 없습니다:', orders[0]);
     }
     
     // 사용자 정보 조회
@@ -1345,11 +1353,15 @@ async function loadReports() {
       // 날짜 확인 및 디버깅
       if (!o.date) {
         console.warn('주문 데이터에 날짜가 없습니다:', o);
+        console.warn('주문 객체의 모든 키:', Object.keys(o));
       }
+      
+      // 날짜가 있으면 그대로 사용, 없으면 빈 문자열
+      const orderDate = o.date || '';
       
       reportsRawData.push({
         name: userName,
-        date: o.date || '', // 날짜가 없으면 빈 문자열
+        date: orderDate,
         vendor: vendorName
       });
     });
