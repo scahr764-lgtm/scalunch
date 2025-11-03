@@ -510,7 +510,10 @@ async function placeOrder() {
     } else {
       // 새 주문 생성 전 확인 다이얼로그
       const vendorName = window.__vendorMap?.[vid] || vid;
-      const dateStr = new Date(d).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
+      // YYYY-MM-DD 형식을 로컬 날짜로 파싱하여 표시
+      const dateParts = d.split('-');
+      const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+      const dateStr = localDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
       const confirmMsg = `날짜: ${dateStr}\n업체: ${vendorName}\n\n주문하시겠습니까?`;
       if (!confirm(confirmMsg)) {
         setLoading(orderBtn, false);
@@ -539,7 +542,10 @@ async function placeOrder() {
     if (!exist) {
       // 새 주문 생성 전 확인 다이얼로그
       const vendorName = window.__vendorMap?.[vid] || vid;
-      const dateStr = new Date(d).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
+      // YYYY-MM-DD 형식을 로컬 날짜로 파싱하여 표시
+      const dateParts = d.split('-');
+      const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+      const dateStr = localDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
       const confirmMsg = `날짜: ${dateStr}\n업체: ${vendorName}\n\n주문하시겠습니까?`;
       if (!confirm(confirmMsg)) {
         setLoading(orderBtn, false);
