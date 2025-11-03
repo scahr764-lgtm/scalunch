@@ -1342,12 +1342,21 @@ async function loadReports() {
       const userName = user.name || user.email || o.user_id;
       const vendorName = vmap[o.vendor_id] || o.vendor_id || '(미지정)';
       
+      // 날짜 확인 및 디버깅
+      if (!o.date) {
+        console.warn('주문 데이터에 날짜가 없습니다:', o);
+      }
+      
       reportsRawData.push({
         name: userName,
-        date: o.date,
+        date: o.date || '', // 날짜가 없으면 빈 문자열
         vendor: vendorName
       });
     });
+    
+    // 디버깅: RAW DATA 확인
+    console.log('reportsRawData 샘플 (최대 5개):', reportsRawData.slice(0, 5));
+    console.log('reportsRawData 총 개수:', reportsRawData.length);
     
     // 집계
     const userVendorCounts = {};
@@ -1518,19 +1527,32 @@ function downloadReportsCSV() {
     return a.date.localeCompare(b.date);
   });
   
+  // 디버깅: RAW DATA 확인
+  console.log('downloadReportsCSV - reportsRawData 개수:', reportsRawData.length);
+  console.log('downloadReportsCSV - sortedRawData 샘플:', sortedRawData.slice(0, 3));
+  
   // RAW DATA 행 생성
   const rawRows = sortedRawData.map(item => {
-    // 날짜 형식 변환 (YYYY-MM-DD를 Excel 날짜로)
-    let dateValue = item.date;
-    if (dateValue && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      // Excel 날짜 형식으로 변환 (1900-01-01 기준 일수)
+    // 날짜 확인 및 변환
+    let dateValue = item.date || '';
+    
+    // 날짜가 있는 경우만 변환
+    if (dateValue && typeof dateValue === 'string' && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Excel 날짜 형식으로 변환
       const dateParts = dateValue.split('-');
       const dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-      // Excel 날짜 형식으로 변환 (날짜 객체 사용)
+      // Date 객체를 사용하면 SheetJS가 날짜로 인식
       dateValue = dateObj;
+    } else if (dateValue && typeof dateValue !== 'string') {
+      // 이미 Date 객체이거나 다른 형식인 경우
+      console.log('날짜 형식 확인:', dateValue, typeof dateValue);
+    } else if (!dateValue) {
+      console.warn('날짜가 없습니다:', item);
     }
+    
     return [item.name, dateValue, item.vendor];
   });
+  
   const rawData = [rawHeaders, ...rawRows];
   
   // RAW DATA 워크시트 생성
@@ -1538,11 +1560,23 @@ function downloadReportsCSV() {
   
   // 날짜 열 형식 설정 (B열 - 날짜)
   const range = XLSX.utils.decode_range(ws2['!ref'] || 'A1');
-  for (let row = 1; row <= range.e.r; row++) { // 헤더 제외하고 데이터 행부터
+  for (let row = 1; row <= range.e.r; row++) { // 헤더 포함 (row 0은 헤더)
     const cellAddress = XLSX.utils.encode_cell({ r: row, c: 1 }); // B열 (인덱스 1)
-    if (ws2[cellAddress] && ws2[cellAddress].v instanceof Date) {
-      // 날짜 형식 지정 (YYYY-MM-DD)
-      ws2[cellAddress].z = 'yyyy-mm-dd';
+    const cell = ws2[cellAddress];
+    if (cell && cell.v instanceof Date) {
+      // 날짜 형식 지정
+      cell.z = 'yyyy-mm-dd';
+      cell.t = 'd'; // 날짜 타입 명시
+    } else if (cell && row > 0) { // 헤더가 아닌 경우
+      // 날짜 문자열인 경우 Date 객체로 변환
+      const cellValue = cell.v;
+      if (typeof cellValue === 'string' && cellValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const dateParts = cellValue.split('-');
+        const dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+        cell.v = dateObj;
+        cell.z = 'yyyy-mm-dd';
+        cell.t = 'd';
+      }
     }
   }
   
