@@ -101,6 +101,7 @@ const refreshDaily = document.getElementById('refreshDaily');
 const detailModal = document.getElementById('detailModal');
 const modalVendorName = document.getElementById('modalVendorName');
 const modalDate = document.getElementById('modalDate');
+const modalTotalCount = document.getElementById('modalTotalCount');
 const modalUserList = document.getElementById('modalUserList');
 const closeModal = document.getElementById('closeModal');
 const closeModalBtn = document.getElementById('closeModalBtn');
@@ -993,7 +994,7 @@ async function loadDailyOrders(targetDate) {
 
 // 업체별 상세 보기 모달 표시
 async function showVendorDetail(vendorId, vendorName, targetDate) {
-  if (!detailModal || !modalVendorName || !modalDate || !modalUserList) return;
+  if (!detailModal || !modalVendorName || !modalDate || !modalUserList || !modalTotalCount) return;
   
   // 모달 헤더 정보 설정
   modalVendorName.textContent = vendorName || '업체명 미지정';
@@ -1002,6 +1003,9 @@ async function showVendorDetail(vendorId, vendorName, targetDate) {
   const dateParts = targetDate.split('-');
   const formattedDate = `${dateParts[0]}년 ${parseInt(dateParts[1])}월 ${parseInt(dateParts[2])}일`;
   modalDate.textContent = formattedDate;
+  
+  // 초기 총 인원 수 (로딩 중)
+  modalTotalCount.textContent = '총 0명';
   
   // 로딩 상태
   modalUserList.innerHTML = '<div class="text-center py-8 text-slate-500">불러오는 중...</div>';
@@ -1035,6 +1039,7 @@ async function showVendorDetail(vendorId, vendorName, targetDate) {
       if (error) {
         console.error('showVendorDetail error:', error);
         modalUserList.innerHTML = '<div class="text-center py-8 text-red-500">데이터를 불러오는 중 오류가 발생했습니다</div>';
+        modalTotalCount.textContent = '총 0명';
         return;
       }
       
@@ -1050,6 +1055,7 @@ async function showVendorDetail(vendorId, vendorName, targetDate) {
         if (userError) {
           console.error('showVendorDetail user query error:', userError);
           modalUserList.innerHTML = '<div class="text-center py-8 text-red-500">사용자 정보를 불러오는 중 오류가 발생했습니다</div>';
+          modalTotalCount.textContent = '총 0명';
           return;
         }
         
@@ -1062,6 +1068,9 @@ async function showVendorDetail(vendorId, vendorName, targetDate) {
         userNames = userIds.map(uid => userMap[uid] || uid).sort();
       }
     }
+    
+    // 총 인원 수 업데이트
+    modalTotalCount.textContent = `총 ${userNames.length}명`;
     
     // 주문자 목록 렌더링
     if (userNames.length === 0) {
@@ -1077,6 +1086,7 @@ async function showVendorDetail(vendorId, vendorName, targetDate) {
   } catch (err) {
     console.error('showVendorDetail exception:', err);
     modalUserList.innerHTML = '<div class="text-center py-8 text-red-500">오류가 발생했습니다</div>';
+    modalTotalCount.textContent = '총 0명';
   }
 }
 
