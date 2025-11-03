@@ -967,6 +967,7 @@ async function loadDailyOrders(targetDate) {
     }
     
     const entries = Object.keys(vendorUsers).map(vid => ({
+      vendor_id: vid,
       vendor_name: vmap[vid] || vid || '(미지정)',
       user_count: vendorUsers[vid].size
     })).sort((a,b) => b.user_count - a.user_count || a.vendor_name.localeCompare(b.vendor_name));
