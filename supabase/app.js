@@ -686,12 +686,13 @@ async function loadMyOrders() {
   // 오늘 날짜 (지난 날짜 필터링용)
   const today = new Date().toISOString().slice(0, 10);
   
-  const vmap = window.__vendorMap || {};
+  let vmap = window.__vendorMap || {}; // Use let to allow reassignment
   // cache key by user+range
   const key = `${currentUser.id}|${s}|${e}`;
   const now = Date.now();
   if (CACHE.myOrders.data && CACHE.myOrders.key===key && now - CACHE.myOrders.ts < CACHE.myOrders.ttl) {
     myOrdersBody.innerHTML = CACHE.myOrders.data;
+    if (myOrdersBodyMobile) myOrdersBodyMobile.innerHTML = CACHE.myOrders.dataMobile || '';
     return;
   }
   
