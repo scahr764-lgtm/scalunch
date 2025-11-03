@@ -1519,11 +1519,33 @@ function downloadReportsCSV() {
   });
   
   // RAW DATA 행 생성
-  const rawRows = sortedRawData.map(item => [item.name, item.date, item.vendor]);
+  const rawRows = sortedRawData.map(item => {
+    // 날짜 형식 변환 (YYYY-MM-DD를 Excel 날짜로)
+    let dateValue = item.date;
+    if (dateValue && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Excel 날짜 형식으로 변환 (1900-01-01 기준 일수)
+      const dateParts = dateValue.split('-');
+      const dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+      // Excel 날짜 형식으로 변환 (날짜 객체 사용)
+      dateValue = dateObj;
+    }
+    return [item.name, dateValue, item.vendor];
+  });
   const rawData = [rawHeaders, ...rawRows];
   
   // RAW DATA 워크시트 생성
   const ws2 = XLSX.utils.aoa_to_sheet(rawData);
+  
+  // 날짜 열 형식 설정 (B열 - 날짜)
+  const range = XLSX.utils.decode_range(ws2['!ref'] || 'A1');
+  for (let row = 1; row <= range.e.r; row++) { // 헤더 제외하고 데이터 행부터
+    const cellAddress = XLSX.utils.encode_cell({ r: row, c: 1 }); // B열 (인덱스 1)
+    if (ws2[cellAddress] && ws2[cellAddress].v instanceof Date) {
+      // 날짜 형식 지정 (YYYY-MM-DD)
+      ws2[cellAddress].z = 'yyyy-mm-dd';
+    }
+  }
+  
   XLSX.utils.book_append_sheet(wb, ws2, 'RAW DATA');
   
   // Excel 파일 다운로드
@@ -2135,6 +2157,21 @@ if (loginPassword) {
 // Session restore
 (async () => {
   await initSupabase();
+  
+  // 저장된 아이디 불러오기
+  try {
+    const savedId = localStorage.getItem('savedLoginId');
+    const saveIdChecked = localStorage.getItem('saveIdChecked') === 'true';
+    
+    if (savedId && loginEmail) {
+      loginEmail.value = savedId;
+    }
+    if (saveId && saveIdChecked) {
+      saveId.checked = true;
+    }
+  } catch (e) {
+    console.warn('저장된 아이디 불러오기 실패:', e);
+  }
   
   if (USE_MOCK) {
     // Mock 모드일 때 개발용 버튼 표시
