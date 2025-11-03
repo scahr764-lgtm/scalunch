@@ -62,6 +62,7 @@ const appSection = document.getElementById('appSection');
 const loginEmail = document.getElementById('loginEmail');
 const loginPassword = document.getElementById('loginPassword');
 const loginBtn = document.getElementById('loginBtn');
+const saveId = document.getElementById('saveId');
 const asEmployee = document.getElementById('asEmployee');
 const asAdmin = document.getElementById('asAdmin');
 const logoutBtn = document.getElementById('logoutBtn');
@@ -225,6 +226,23 @@ async function handleLogin() {
   
   if (loginMsg) loginMsg.textContent = '';
   setLoading(loginBtn, true);
+  
+  // 아이디 저장 처리
+  if (saveId && saveId.checked) {
+    try {
+      localStorage.setItem('savedLoginId', email);
+      localStorage.setItem('saveIdChecked', 'true');
+    } catch (e) {
+      console.warn('아이디 저장 실패:', e);
+    }
+  } else {
+    try {
+      localStorage.removeItem('savedLoginId');
+      localStorage.removeItem('saveIdChecked');
+    } catch (e) {
+      console.warn('아이디 저장 정보 삭제 실패:', e);
+    }
+  }
   
   try {
     if (USE_MOCK) {
