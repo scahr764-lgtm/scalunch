@@ -710,39 +710,60 @@ async function loadMyOrders() {
       .filter(o=>o.user_id===currentUser.id && o.date>=s && o.date<=e && o.date>=today && o.status==='ordered')
       .sort((a,b)=>a.date.localeCompare(b.date)); // 오름차순 정렬
     if (rows.length > 0) {
-      // 데스크톱: 테이블 형태
-      const tableHtml = rows.map((o, idx)=>{
-        const vendorName = vmap[o.vendor_id] || o.vendor_id || '(미지정)';
-        const mockId = o.id || `mock-${o.date}-${idx}`;
-        return `<tr>
-          <td class="p-3">${o.date}</td>
-          <td class="p-3">${vendorName}</td>
-          <td class="p-3">${o.status||'ordered'}</td>
-          <td class="p-3">
-            <button class="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 active:scale-95 transition-transform" 
-                    onclick="cancelMyOrder('${o.date}', '${mockId}')">취소</button>
-          </td>
-        </tr>`;
-      }).join('');
-      myOrdersBody.innerHTML = tableHtml;
-      
-      // 모바일: 카드 형태
-      const mobileHtml = rows.map((o, idx)=>{
-        const vendorName = vmap[o.vendor_id] || o.vendor_id || '(미지정)';
-        const mockId = o.id || `mock-${o.date}-${idx}`;
-        return `<div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
-          <div class="flex justify-between items-start mb-3">
-            <div>
-              <div class="font-semibold text-base text-slate-900">${o.date}</div>
-              <div class="text-sm text-slate-600 mt-1">${vendorName}</div>
-            </div>
-            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">${o.status||'ordered'}</span>
-          </div>
-          <button class="w-full py-2.5 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 active:scale-95 transition-transform" 
-                  onclick="cancelMyOrder('${o.date}', '${mockId}')">주문 취소</button>
-        </div>`;
-      }).join('');
-      if (myOrdersBodyMobile) myOrdersBodyMobile.innerHTML = mobileHtml;
+            // 데스크톱: 테이블 형태 - 개선된 디자인
+            const tableHtml = rows.map((o, idx)=>{
+              const vendorName = vmap[o.vendor_id] || o.vendor_id || '(미지정)';
+              const mockId = o.id || `mock-${o.date}-${idx}`;
+              return `<tr class="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all duration-200">
+                <td class="p-4 font-semibold text-slate-700">📅 ${o.date}</td>
+                <td class="p-4">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-brand"></span>
+                    <span class="font-medium text-slate-800">${vendorName}</span>
+                  </div>
+                </td>
+                <td class="p-4">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200/50">
+                    ✓ ${o.status||'ordered'}
+                  </span>
+                </td>
+                <td class="p-4">
+                  <button class="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm hover:shadow" 
+                          onclick="cancelMyOrder('${o.date}', '${mockId}')">
+                    ✕ 취소
+                  </button>
+                </td>
+              </tr>`;
+            }).join('');
+            myOrdersBody.innerHTML = tableHtml;
+            
+            // 모바일: 카드 형태 - 개선된 디자인
+            const mobileHtml = rows.map((o, idx)=>{
+              const vendorName = vmap[o.vendor_id] || o.vendor_id || '(미지정)';
+              const mockId = o.id || `mock-${o.date}-${idx}`;
+              return `<div class="bg-gradient-to-br from-white to-blue-50/30 rounded-xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-all">
+                <div class="flex justify-between items-start mb-4">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="text-lg">📅</span>
+                      <div class="font-bold text-lg text-slate-800">${o.date}</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-brand"></span>
+                      <span class="font-semibold text-slate-700">${vendorName}</span>
+                    </div>
+                  </div>
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200/50">
+                    ✓ 주문됨
+                  </span>
+                </div>
+                <button class="w-full py-3 bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl font-bold hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm" 
+                        onclick="cancelMyOrder('${o.date}', '${mockId}')">
+                  ✕ 주문 취소
+                </button>
+              </div>`;
+            }).join('');
+            if (myOrdersBodyMobile) myOrdersBodyMobile.innerHTML = mobileHtml;
     } else {
       myOrdersBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500">조회된 주문이 없습니다</td></tr>';
       if (myOrdersBodyMobile) myOrdersBodyMobile.innerHTML = '<div class="text-center text-slate-500 py-8">조회된 주문이 없습니다</div>';
@@ -785,34 +806,55 @@ async function loadMyOrders() {
         .sort((a, b) => a.date.localeCompare(b.date)); // 오름차순 정렬
       
       if (filteredData && filteredData.length > 0) {
-        // 데스크톱: 테이블 형태
+        // 데스크톱: 테이블 형태 - 개선된 디자인
         const tableHtml = filteredData.map(o=>{
           const vendorName = vmap[o.vendor_id] || o.vendor_id || '(미지정)';
-          return `<tr>
-            <td class="p-3">${o.date}</td>
-            <td class="p-3">${vendorName}</td>
-            <td class="p-3">${o.status||'ordered'}</td>
-            <td class="p-3">
-              <button class="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 active:scale-95 transition-transform" 
-                      onclick="cancelMyOrder('${o.date}', '${o.id||''}')">취소</button>
+          return `<tr class="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 transition-all duration-200">
+            <td class="p-4 font-semibold text-slate-700">📅 ${o.date}</td>
+            <td class="p-4">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-brand"></span>
+                <span class="font-medium text-slate-800">${vendorName}</span>
+              </div>
+            </td>
+            <td class="p-4">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200/50">
+                ✓ ${o.status||'ordered'}
+              </span>
+            </td>
+            <td class="p-4">
+              <button class="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm hover:shadow" 
+                      onclick="cancelMyOrder('${o.date}', '${o.id||''}')">
+                ✕ 취소
+              </button>
             </td>
           </tr>`;
         }).join('');
         myOrdersBody.innerHTML = tableHtml;
         
-        // 모바일: 카드 형태
+        // 모바일: 카드 형태 - 개선된 디자인
         const mobileHtml = filteredData.map(o=>{
           const vendorName = vmap[o.vendor_id] || o.vendor_id || '(미지정)';
-          return `<div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
-            <div class="flex justify-between items-start mb-3">
-              <div>
-                <div class="font-semibold text-base text-slate-900">${o.date}</div>
-                <div class="text-sm text-slate-600 mt-1">${vendorName}</div>
+          return `<div class="bg-gradient-to-br from-white to-blue-50/30 rounded-xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-all">
+            <div class="flex justify-between items-start mb-4">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">📅</span>
+                  <div class="font-bold text-lg text-slate-800">${o.date}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-brand"></span>
+                  <span class="font-semibold text-slate-700">${vendorName}</span>
+                </div>
               </div>
-              <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">${o.status||'ordered'}</span>
+              <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200/50">
+                ✓ 주문됨
+              </span>
             </div>
-            <button class="w-full py-2.5 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 active:scale-95 transition-transform" 
-                    onclick="cancelMyOrder('${o.date}', '${o.id||''}')">주문 취소</button>
+            <button class="w-full py-3 bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl font-bold hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm" 
+                    onclick="cancelMyOrder('${o.date}', '${o.id||''}')">
+              ✕ 주문 취소
+            </button>
           </div>`;
         }).join('');
         if (myOrdersBodyMobile) myOrdersBodyMobile.innerHTML = mobileHtml;
