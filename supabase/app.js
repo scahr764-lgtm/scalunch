@@ -98,6 +98,12 @@ const dailyDate = document.getElementById('dailyDate');
 const dailyTotal = document.getElementById('dailyTotal');
 const dailyVendors = document.getElementById('dailyVendors');
 const refreshDaily = document.getElementById('refreshDaily');
+const detailModal = document.getElementById('detailModal');
+const modalVendorName = document.getElementById('modalVendorName');
+const modalDate = document.getElementById('modalDate');
+const modalUserList = document.getElementById('modalUserList');
+const closeModal = document.getElementById('closeModal');
+const closeModalBtn = document.getElementById('closeModalBtn');
 
 const empUserId = document.getElementById('empUserId');
 const empUserName = document.getElementById('empUserName');
@@ -958,11 +964,112 @@ async function loadDailyOrders(targetDate) {
     if (dailyTotal) dailyTotal.textContent = totalUsers;
     if (dailyVendors) {
       dailyVendors.innerHTML = entries.map(e => 
-        `<tr><td class="p-2">${e.vendor_name}</td><td class="p-2">${e.user_count}명</td></tr>`
+        `<tr>
+          <td class="p-3 font-medium">${e.vendor_name}</td>
+          <td class="p-3">${e.user_count}명</td>
+          <td class="p-3">
+            <button onclick="showVendorDetail('${e.vendor_id || ''}', '${e.vendor_name}', '${targetDate}')" 
+                    class="px-3 py-1.5 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark active:scale-95 transition-transform font-medium">
+              상세 보기
+            </button>
+          </td>
+        </tr>`
       ).join('');
     }
   }
 }
+
+// 업체별 상세 보기 모달 표시
+async function showVendorDetail(vendorId, vendorName, targetDate) {
+  if (!detailModal || !modalVendorName || !modalDate || !modalUserList) return;
+  
+  // 모달 헤더 정보 설정
+  modalVendorName.textContent = vendorName || '업체명 미지정';
+  
+  // 날짜 포맷팅 (YYYY-MM-DD → YYYY년 MM월 DD일)
+  const dateParts = targetDate.split('-');
+  const formattedDate = `${dateParts[0]}년 ${parseInt(dateParts[1])}월 ${parseInt(dateParts[2])}일`;
+  modalDate.textContent = formattedDate;
+  
+  // 로딩 상태
+  modalUserList.innerHTML = '<div class="text-center py-8 text-slate-500">불러오는 중...</div>';
+  
+  // 모달 표시
+  detailModal.classList.remove('hidden');
+  detailModal.classList.add('flex');
+  
+  try {
+    let userNames = [];
+    
+    if (USE_MOCK) {
+      // Mock 모드: 해당 날짜와 업체의 주문자 ID 조회
+      const orders = MOCK.orders.filter(o => o.date === targetDate && o.vendor_id === vendorId && o.status === 'ordered');
+      const userIds = [...new Set(orders.map(o => o.user_id))];
+      
+      // 사용자 이름 조회
+      userNames = userIds.map(uid => {
+        const user = MOCK.employees.find(e => (e.user_id || e.email) === uid);
+        return user ? user.name : uid;
+      }).sort();
+    } else {
+      // Supabase 모드: 주문자 조회
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select('user_id')
+        .eq('date', targetDate)
+        .eq('vendor_id', vendorId)
+        .eq('status', 'ordered');
+      
+      if (error) {
+        console.error('showVendorDetail error:', error);
+        modalUserList.innerHTML = '<div class="text-center py-8 text-red-500">데이터를 불러오는 중 오류가 발생했습니다</div>';
+        return;
+      }
+      
+      const userIds = [...new Set((orders || []).map(o => o.user_id))];
+      
+      // 사용자 이름 조회
+      if (userIds.length > 0) {
+        const { data: users, error: userError } = await supabase
+          .from('users')
+          .select('user_id, name, email')
+          .in('user_id', userIds);
+        
+        if (userError) {
+          console.error('showVendorDetail user query error:', userError);
+          modalUserList.innerHTML = '<div class="text-center py-8 text-red-500">사용자 정보를 불러오는 중 오류가 발생했습니다</div>';
+          return;
+        }
+        
+        // user_id로 매핑
+        const userMap = {};
+        (users || []).forEach(u => {
+          userMap[u.user_id] = u.name || u.email || u.user_id;
+        });
+        
+        userNames = userIds.map(uid => userMap[uid] || uid).sort();
+      }
+    }
+    
+    // 주문자 목록 렌더링
+    if (userNames.length === 0) {
+      modalUserList.innerHTML = '<div class="text-center py-8 text-slate-500">주문자가 없습니다</div>';
+    } else {
+      modalUserList.innerHTML = userNames.map((name, idx) => 
+        `<div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <span class="flex items-center justify-center w-8 h-8 rounded-full bg-brand text-white font-bold text-sm">${idx + 1}</span>
+          <span class="font-medium text-slate-800">${name}</span>
+        </div>`
+      ).join('');
+    }
+  } catch (err) {
+    console.error('showVendorDetail exception:', err);
+    modalUserList.innerHTML = '<div class="text-center py-8 text-red-500">오류가 발생했습니다</div>';
+  }
+}
+
+// 전역 함수로 등록 (onclick에서 사용)
+window.showVendorDetail = showVendorDetail;
 
 // Employee management
 async function loadEmployees() {
@@ -1630,6 +1737,33 @@ if (orderBtn) orderBtn.addEventListener('click', async () => {
 });
 if (refreshDaily) refreshDaily.addEventListener('click', () => loadDailyOrders());
 if (dailyDate) dailyDate.addEventListener('change', () => loadDailyOrders());
+
+// 모달 닫기 이벤트
+if (closeModal) {
+  closeModal.addEventListener('click', () => {
+    if (detailModal) {
+      detailModal.classList.add('hidden');
+      detailModal.classList.remove('flex');
+    }
+  });
+}
+if (closeModalBtn) {
+  closeModalBtn.addEventListener('click', () => {
+    if (detailModal) {
+      detailModal.classList.add('hidden');
+      detailModal.classList.remove('flex');
+    }
+  });
+}
+// 모달 배경 클릭 시 닫기
+if (detailModal) {
+  detailModal.addEventListener('click', (e) => {
+    if (e.target === detailModal) {
+      detailModal.classList.add('hidden');
+      detailModal.classList.remove('flex');
+    }
+  });
+}
 if (devBtn) {
   if (DEV_MODE) devBtn.classList.remove('hidden');
   devBtn.addEventListener('click', devLogin);
