@@ -98,6 +98,7 @@ const dailyDate = document.getElementById('dailyDate');
 const dailyTotal = document.getElementById('dailyTotal');
 const dailyVendors = document.getElementById('dailyVendors');
 const refreshDaily = document.getElementById('refreshDaily');
+const showAllDetails = document.getElementById('showAllDetails');
 const detailModal = document.getElementById('detailModal');
 const modalVendorName = document.getElementById('modalVendorName');
 const modalDate = document.getElementById('modalDate');
@@ -105,6 +106,12 @@ const modalTotalCount = document.getElementById('modalTotalCount');
 const modalUserList = document.getElementById('modalUserList');
 const closeModal = document.getElementById('closeModal');
 const closeModalBtn = document.getElementById('closeModalBtn');
+const allDetailsModal = document.getElementById('allDetailsModal');
+const allModalDate = document.getElementById('allModalDate');
+const allModalTotalCount = document.getElementById('allModalTotalCount');
+const allDetailsContent = document.getElementById('allDetailsContent');
+const closeAllModal = document.getElementById('closeAllModal');
+const closeAllModalBtn = document.getElementById('closeAllModalBtn');
 
 const empUserId = document.getElementById('empUserId');
 const empUserName = document.getElementById('empUserName');
@@ -1759,6 +1766,200 @@ if (orderBtn) orderBtn.addEventListener('click', async () => {
 });
 if (refreshDaily) refreshDaily.addEventListener('click', () => loadDailyOrders());
 if (dailyDate) dailyDate.addEventListener('change', () => loadDailyOrders());
+
+// 전체 상세 보기 버튼
+if (showAllDetails) {
+  showAllDetails.addEventListener('click', async () => {
+    const targetDate = dailyDate?.value || getLocalDateString();
+    await showAllVendorsDetail(targetDate);
+  });
+}
+
+// 전체 상세 보기 모달 표시 함수
+async function showAllVendorsDetail(targetDate) {
+  if (!allDetailsModal || !allModalDate || !allModalTotalCount || !allDetailsContent) return;
+  
+  // 날짜 포맷팅
+  const dateParts = targetDate.split('-');
+  const formattedDate = `${dateParts[0]}년 ${parseInt(dateParts[1])}월 ${parseInt(dateParts[2])}일`;
+  allModalDate.textContent = formattedDate;
+  
+  // 초기값
+  allModalTotalCount.textContent = '총 0명';
+  allDetailsContent.innerHTML = '<div class="text-center py-8 text-slate-500">불러오는 중...</div>';
+  
+  // 모달 표시
+  allDetailsModal.classList.remove('hidden');
+  allDetailsModal.classList.add('flex');
+  
+  try {
+    let vendorData = []; // { vendor_id, vendor_name, userNames: [] }
+    let totalCount = 0;
+    
+    if (USE_MOCK) {
+      // Mock 모드: 모든 업체별 주문자 조회
+      const rows = MOCK.orders.filter(o => o.date === targetDate && o.status === 'ordered');
+      
+      // 업체별로 그룹화
+      const vendorUsers = {}; // { vendor_id: Set<user_id> }
+      rows.forEach(r => {
+        const vid = r.vendor_id || '';
+        if (!vendorUsers[vid]) vendorUsers[vid] = new Set();
+        vendorUsers[vid].add(r.user_id);
+      });
+      
+      const vmap = window.__vendorMap || {};
+      const vendors = MOCK.vendors;
+      
+      // 각 업체별 주문자 이름 조회
+      for (const vid of Object.keys(vendorUsers)) {
+        const userIds = [...vendorUsers[vid]];
+        const userNames = userIds.map(uid => {
+          const user = MOCK.employees.find(e => (e.user_id || e.email) === uid);
+          return user ? user.name : uid;
+        }).sort();
+        
+        const vendorName = vmap[vid] || vendors.find(v => v.vendor_id === vid)?.name || vid || '(미지정)';
+        vendorData.push({
+          vendor_id: vid,
+          vendor_name: vendorName,
+          userNames: userNames,
+          count: userNames.length
+        });
+        totalCount += userNames.length;
+      }
+      
+      // 주문자 수 내림차순, 업체명 오름차순 정렬
+      vendorData.sort((a, b) => b.count - a.count || a.vendor_name.localeCompare(b.vendor_name));
+    } else {
+      // Supabase 모드: 모든 업체별 주문자 조회
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select('vendor_id, user_id')
+        .eq('date', targetDate)
+        .eq('status', 'ordered');
+      
+      if (error) {
+        console.error('showAllVendorsDetail error:', error);
+        allDetailsContent.innerHTML = '<div class="text-center py-8 text-red-500">데이터를 불러오는 중 오류가 발생했습니다</div>';
+        return;
+      }
+      
+      // 업체별로 그룹화
+      const vendorUsers = {}; // { vendor_id: Set<user_id> }
+      (orders || []).forEach(r => {
+        const vid = r.vendor_id || '';
+        if (!vendorUsers[vid]) vendorUsers[vid] = new Set();
+        vendorUsers[vid].add(r.user_id);
+      });
+      
+      // 업체명 조회
+      const vmap = window.__vendorMap || {};
+      const vendorIds = Object.keys(vendorUsers);
+      if (vendorIds.length > 0) {
+        const { data: vendors } = await supabase.from('vendors').select('vendor_id, name');
+        (vendors || []).forEach(v => { vmap[v.vendor_id] = v.name; });
+        window.__vendorMap = vmap;
+      }
+      
+      // 각 업체별 주문자 이름 조회
+      const userIds = [...new Set((orders || []).map(o => o.user_id))];
+      let userMap = {};
+      
+      if (userIds.length > 0) {
+        const { data: users, error: userError } = await supabase
+          .from('users')
+          .select('user_id, name, email')
+          .in('user_id', userIds);
+        
+        if (!userError && users) {
+          users.forEach(u => {
+            userMap[u.user_id] = u.name || u.email || u.user_id;
+          });
+        }
+      }
+      
+      // 업체별 데이터 구성
+      for (const vid of vendorIds) {
+        const userIdsForVendor = [...vendorUsers[vid]];
+        const userNames = userIdsForVendor.map(uid => userMap[uid] || uid).sort();
+        const vendorName = vmap[vid] || vid || '(미지정)';
+        
+        vendorData.push({
+          vendor_id: vid,
+          vendor_name: vendorName,
+          userNames: userNames,
+          count: userNames.length
+        });
+        totalCount += userNames.length;
+      }
+      
+      // 주문자 수 내림차순, 업체명 오름차순 정렬
+      vendorData.sort((a, b) => b.count - a.count || a.vendor_name.localeCompare(b.vendor_name));
+    }
+    
+    // 총 인원 수 업데이트
+    allModalTotalCount.textContent = `총 ${totalCount}명`;
+    
+    // 업체별 섹션 렌더링
+    if (vendorData.length === 0) {
+      allDetailsContent.innerHTML = '<div class="text-center py-8 text-slate-500">주문 내역이 없습니다</div>';
+    } else {
+      allDetailsContent.innerHTML = vendorData.map((vendor, vendorIdx) => 
+        `<div class="bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-xl p-6 border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-300">
+            <div class="flex items-center gap-3">
+              <span class="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-dark text-white font-bold text-lg">${vendorIdx + 1}</span>
+              <div>
+                <h3 class="text-xl font-bold text-slate-800">${vendor.vendor_name}</h3>
+                <p class="text-sm text-slate-600 mt-1">주문자 ${vendor.count}명</p>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            ${vendor.userNames.map((name, idx) => 
+              `<div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition">
+                <span class="flex items-center justify-center w-7 h-7 rounded-full bg-brand/20 text-brand font-bold text-sm">${idx + 1}</span>
+                <span class="font-medium text-slate-700">${name}</span>
+              </div>`
+            ).join('')}
+          </div>
+        </div>`
+      ).join('');
+    }
+  } catch (err) {
+    console.error('showAllVendorsDetail exception:', err);
+    allDetailsContent.innerHTML = '<div class="text-center py-8 text-red-500">오류가 발생했습니다</div>';
+    allModalTotalCount.textContent = '총 0명';
+  }
+}
+
+// 전체 상세 보기 모달 닫기 이벤트
+if (closeAllModal) {
+  closeAllModal.addEventListener('click', () => {
+    if (allDetailsModal) {
+      allDetailsModal.classList.add('hidden');
+      allDetailsModal.classList.remove('flex');
+    }
+  });
+}
+if (closeAllModalBtn) {
+  closeAllModalBtn.addEventListener('click', () => {
+    if (allDetailsModal) {
+      allDetailsModal.classList.add('hidden');
+      allDetailsModal.classList.remove('flex');
+    }
+  });
+}
+// 모달 배경 클릭 시 닫기
+if (allDetailsModal) {
+  allDetailsModal.addEventListener('click', (e) => {
+    if (e.target === allDetailsModal) {
+      allDetailsModal.classList.add('hidden');
+      allDetailsModal.classList.remove('flex');
+    }
+  });
+}
 
 // 모달 닫기 이벤트
 if (closeModal) {

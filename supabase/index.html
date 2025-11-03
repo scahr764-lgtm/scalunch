@@ -202,6 +202,7 @@
               <label class="text-sm text-slate-600">조회 날짜:</label>
               <input id="dailyDate" type="date" class="border rounded px-3 py-2">
               <button id="refreshDaily" class="px-3 py-1 border rounded">조회</button>
+              <button id="showAllDetails" class="px-4 py-1.5 bg-brand text-white rounded hover:bg-brand-dark active:scale-95 transition-transform font-medium">전체 상세 보기</button>
             </div>
             <div class="mb-3">
               총합: <span id="dailyTotal" class="font-semibold">0</span> 건
@@ -249,6 +250,36 @@
               </div>
             </div>
           </div>
+
+          <!-- 전체 상세 보기 모달 -->
+          <div id="allDetailsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+              <!-- 모달 헤더 -->
+              <div class="bg-gradient-to-r from-brand to-brand-dark text-white p-6">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <h2 class="text-2xl font-bold mb-1">전체 주문 현황</h2>
+                    <p id="allModalDate" class="text-brand-light mb-2">날짜</p>
+                    <p id="allModalTotalCount" class="text-lg font-semibold">총 0명</p>
+                  </div>
+                  <button id="closeAllModal" class="text-white hover:text-slate-200 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition">×</button>
+                </div>
+              </div>
+              
+              <!-- 모달 본문 -->
+              <div class="p-6 overflow-y-auto flex-1">
+                <div id="allDetailsContent" class="space-y-6">
+                  <!-- 업체별 섹션이 여기에 동적으로 추가됩니다 -->
+                </div>
+              </div>
+              
+              <!-- 모달 푸터 -->
+              <div class="border-t border-slate-200 p-4 flex justify-end">
+                <button id="closeAllModalBtn" class="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition font-medium">닫기</button>
+              </div>
+            </div>
+          </div>
+
           <!-- 직원 계정 관리 -->
           <div class="bg-white rounded-xl shadow p-6 hidden" id="employeesPanel" data-panel="employees">
             <h3 class="font-semibold mb-4">직원 계정 관리</h3>
