@@ -117,6 +117,14 @@ let currentUser = null; // { id, email, role, name }
 const DEFAULT_CUTOFF = '10:30'; // TODO: 서버 연동 시 날짜별 마감시간 로드
 let __isOrdered = false;
 
+// 로컬 날짜를 YYYY-MM-DD 형식으로 반환 (UTC 문제 해결)
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Simple in-memory cache (ms TTL)
 const CACHE = {
   vendors: { data: null, ts: 0, ttl: 30000 },
@@ -659,7 +667,7 @@ async function cancelMyOrder(orderDate, orderId) {
   await loadMyOrders();
   
   // 오늘 날짜의 주문을 취소한 경우 토글 상태도 업데이트
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
   if (orderDate === today) {
     await refreshToggleState();
   }
@@ -683,8 +691,8 @@ async function loadMyOrders() {
     return;
   }
   
-  // 오늘 날짜 (지난 날짜 필터링용)
-  const today = new Date().toISOString().slice(0, 10);
+  // 오늘 날짜 (지난 날짜 필터링용) - 로컬 날짜 사용
+  const today = getLocalDateString();
   
   let vmap = window.__vendorMap || {}; // Use let to allow reassignment
   // cache key by user+range
@@ -876,7 +884,7 @@ async function loadMyOrders() {
 // Daily orders overview (업체별 주문자 수)
 async function loadDailyOrders(targetDate) {
   if (!targetDate) {
-    if (dailyDate) targetDate = dailyDate.value || new Date().toISOString().slice(0,10);
+    if (dailyDate) targetDate = dailyDate.value || getLocalDateString();
     else return;
   }
   
@@ -1335,8 +1343,8 @@ function getThisWeekRange() {
   friday.setHours(23, 59, 59, 999);
   
   return {
-    start: monday.toISOString().slice(0, 10),
-    end: friday.toISOString().slice(0, 10)
+    start: getLocalDateString(monday), // 로컬 날짜 사용
+    end: getLocalDateString(friday) // 로컬 날짜 사용
   };
 }
 
@@ -1354,8 +1362,8 @@ function getWeekRange(weekOffset = 0) {
   friday.setHours(23, 59, 59, 999);
   
   return {
-    start: monday.toISOString().slice(0, 10),
-    end: friday.toISOString().slice(0, 10)
+    start: getLocalDateString(monday), // 로컬 날짜 사용
+    end: getLocalDateString(friday) // 로컬 날짜 사용
   };
 }
 
@@ -1376,7 +1384,7 @@ function updateWeekButtonState(selectedWeek) {
 }
 
 function initApp() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = getLocalDateString(); // 로컬 날짜 사용
   empDate.value = today;
   if (dailyDate) dailyDate.value = today; // 금일 주문 현황 기본 날짜
   // default range: 이번 주(월~금), 지난 날짜 제외
@@ -1442,7 +1450,7 @@ function showPanel(name) {
   }
   // 집계/CSV 패널을 선택했을 때 날짜 기본값 설정
   if (name === 'reports') {
-    const today = new Date().toISOString().slice(0,10);
+    const today = getLocalDateString(); // 로컬 날짜 사용
     const ym = today.slice(0,7);
     if (reportStart) reportStart.value = ym + '-01';
     if (reportEnd) reportEnd.value = today;
@@ -1475,7 +1483,7 @@ if (empDate) empDate.addEventListener('change', () => { updateCutoffBadge(); ref
 const todayBtn = document.getElementById('todayBtn');
 if (todayBtn) {
   todayBtn.addEventListener('click', () => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getLocalDateString(); // 로컬 날짜 사용
     empDate.value = today;
     updateCutoffBadge();
     refreshToggleState();
@@ -1513,14 +1521,15 @@ function updateCutoffBadge() {
   if (!cutoffBadge) return;
   const sel = empDate.value;
   if (!sel) { cutoffBadge.textContent = '마감: -'; cutoffBadge.className = 'mt-1 text-xs inline-block px-2 py-1 rounded bg-slate-100 text-slate-700'; return; }
-  // 오늘이면 마감 비교
-  const today = new Date().toISOString().slice(0,10);
+  // 오늘이면 마감 비교 - 로컬 날짜 사용
+  const today = getLocalDateString();
   const cutoff = DEFAULT_CUTOFF;
   cutoffBadge.textContent = `마감: ${cutoff}`;
   if (sel === today) {
-    const now = new Date();
+    const now = new Date(); // 로컬 시간 기준
     const [h,m] = cutoff.split(':').map(n=>parseInt(n,10));
-    const cutoffDate = new Date(); cutoffDate.setHours(h, m, 0, 0);
+    const cutoffDate = new Date(); 
+    cutoffDate.setHours(h, m, 0, 0); // 로컬 시간 기준으로 설정
     const diff = cutoffDate.getTime() - now.getTime();
     // 상태 색상: 여유(>30m)=slate, 임박(<=30m && >0)=amber, 지남(<=0)=rose
     if (diff <= 0) {
