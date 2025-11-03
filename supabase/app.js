@@ -1301,10 +1301,10 @@ async function loadReports() {
     
     renderReportsPivot();
   } else {
-    // Supabase: 주문 데이터 조회
+    // Supabase: 주문 데이터 조회 (날짜 필드 포함)
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
-      .select('user_id, vendor_id')
+      .select('user_id, vendor_id, date')
       .gte('date', start)
       .lte('date', end)
       .eq('status', 'ordered');
