@@ -67,6 +67,7 @@
         <aside id="adminSidebar" class="hidden md:block col-span-12 md:col-span-3 lg:col-span-2 bg-white rounded-xl shadow p-4 h-max sticky top-6">
           <nav class="space-y-1 text-sm">
             <button data-nav="daily" class="nav-btn w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100">금일 주문 현황</button>
+            <button data-nav="bulk-order" class="nav-btn w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100">일괄 주문 관리</button>
             <button data-nav="vendors" class="nav-btn w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100">업체 관리</button>
             <button data-nav="employees" class="nav-btn w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100">직원 계정 관리</button>
             <button data-nav="reports" class="nav-btn w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100">집계/CSV</button>
@@ -180,6 +181,50 @@
             </div>
           </div>
 
+          <!-- 일괄 주문 관리 -->
+          <div id="bulkOrderPanel" class="bg-white rounded-xl shadow p-6 hidden" data-panel="bulk-order">
+            <h3 class="font-semibold mb-4 text-lg">일괄 주문 관리</h3>
+            
+            <!-- 날짜 선택 -->
+            <div class="mb-4 p-4 bg-slate-50 rounded-lg">
+              <h4 class="font-medium mb-3">1. 주문 날짜 선택</h4>
+              <div>
+                <label class="block text-xs mb-1 text-slate-600">주문 날짜</label>
+                <input id="bulkDateInput" type="date" class="border rounded px-3 py-2">
+              </div>
+            </div>
+
+            <!-- 업체 선택 -->
+            <div class="mb-4 p-4 bg-slate-50 rounded-lg">
+              <h4 class="font-medium mb-3">2. 도시락 업체 선택</h4>
+              <select id="bulkVendorSelect" class="border rounded px-3 py-2 min-w-[300px]">
+                <option value="">업체를 선택하세요</option>
+              </select>
+            </div>
+
+            <!-- 직원 선택 -->
+            <div class="mb-4 p-4 bg-slate-50 rounded-lg">
+              <div class="flex justify-between items-center mb-3">
+                <h4 class="font-medium">3. 주문할 직원 선택</h4>
+                <button id="toggleAllEmployeesBtn" class="text-sm px-3 py-1 border rounded hover:bg-slate-200">전체 선택</button>
+              </div>
+              <div id="bulkEmployeesList" class="max-h-64 overflow-y-auto border rounded p-2">
+                <p class="text-sm text-slate-500 py-4 text-center">직원 목록을 불러오는 중...</p>
+              </div>
+              <p class="text-sm text-slate-600 mt-2">
+                선택된 직원: <span id="selectedEmployeesCount">0</span>명 / 전체: <span id="totalEmployeesCount">0</span>명
+              </p>
+            </div>
+
+            <!-- 주문 실행 -->
+            <div class="flex gap-3 items-center">
+              <button id="placeBulkOrdersBtn" class="px-6 py-2 bg-brand text-white rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                일괄 주문 실행
+              </button>
+              <p id="bulkOrderMsg" class="text-sm"></p>
+            </div>
+          </div>
+
           <!-- 관리자: 업체 관리 -->
           <div id="adminVendors" class="bg-white rounded-xl shadow p-6 hidden" data-panel="vendors">
             <h3 class="font-semibold mb-4">업체 관리</h3>
@@ -222,6 +267,9 @@
               </thead>
               <tbody id="dailyVendors" class="divide-y divide-slate-100"></tbody>
             </table>
+            <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p class="text-xs text-blue-700">💡 관리자는 상세 보기에서 각 주문을 개별 취소할 수 있습니다.</p>
+            </div>
           </div>
 
           <!-- 상세 보기 모달 -->

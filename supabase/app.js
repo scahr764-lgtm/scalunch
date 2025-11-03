@@ -126,8 +126,26 @@ const searchReports = document.getElementById('searchReports');
 const downloadCSV = document.getElementById('downloadCSV');
 const reportsBody = document.getElementById('reportsBody');
 
+// 일괄 주문 관련 요소
+const bulkDateInput = document.getElementById('bulkDateInput');
+const addBulkDateBtn = document.getElementById('addBulkDateBtn');
+const selectedDatesList = document.getElementById('selectedDatesList');
+const selectedDatesDisplay = document.getElementById('selectedDatesDisplay');
+const datesCount = document.getElementById('datesCount');
+const bulkVendorSelect = document.getElementById('bulkVendorSelect');
+const bulkEmployeesList = document.getElementById('bulkEmployeesList');
+const toggleAllEmployeesBtn = document.getElementById('toggleAllEmployeesBtn');
+const selectedEmployeesCount = document.getElementById('selectedEmployeesCount');
+const totalEmployeesCount = document.getElementById('totalEmployeesCount');
+const placeBulkOrdersBtn = document.getElementById('placeBulkOrdersBtn');
+const bulkOrderMsg = document.getElementById('bulkOrderMsg');
+
 let reportsData = []; // CSV 다운로드를 위한 데이터 저장
 let reportsRawData = []; // RAW DATA 저장 (이름, 날짜, 업체)
+
+// 일괄 주문 상태
+let bulkSelectedDate = ''; // 선택된 날짜 (단일)
+let bulkSelectedEmployees = new Set(); // 선택된 직원 ID Set
 
 let currentUser = null; // { id, email, role, name }
 const DEFAULT_CUTOFF = '10:30'; // TODO: 서버 연동 시 날짜별 마감시간 로드
@@ -1018,7 +1036,7 @@ async function loadDailyOrders(targetDate) {
   }
 }
 
-// 업체별 상세 보기 모달 표시
+// 업체별 상세 보기 모달 표시 (관리자 개별 취소 기능 포함)
 async function showVendorDetail(vendorId, vendorName, targetDate) {
   if (!detailModal || !modalVendorName || !modalDate || !modalUserList || !modalTotalCount) return;
   
@@ -1041,23 +1059,26 @@ async function showVendorDetail(vendorId, vendorName, targetDate) {
   detailModal.classList.add('flex');
   
   try {
-    let userNames = [];
+    let userOrders = []; // { user_id, name, order_id }
     
     if (USE_MOCK) {
-      // Mock 모드: 해당 날짜와 업체의 주문자 ID 조회
+      // Mock 모드: 해당 날짜와 업체의 주문 조회
       const orders = MOCK.orders.filter(o => o.date === targetDate && o.vendor_id === vendorId && o.status === 'ordered');
-      const userIds = [...new Set(orders.map(o => o.user_id))];
       
-      // 사용자 이름 조회
-      userNames = userIds.map(uid => {
-        const user = MOCK.employees.find(e => (e.user_id || e.email) === uid);
-        return user ? user.name : uid;
-      }).sort();
+      // 사용자 이름과 함께 매핑
+      userOrders = orders.map(order => {
+        const user = MOCK.employees.find(e => (e.user_id || e.email) === order.user_id);
+        return {
+          user_id: order.user_id,
+          name: user ? user.name : order.user_id,
+          order_id: order.id || order.user_id + '_' + order.date
+        };
+      }).sort((a, b) => a.name.localeCompare(b.name));
     } else {
-      // Supabase 모드: 주문자 조회
+      // Supabase 모드: 주문자 조회 (order_id 포함)
       const { data: orders, error } = await supabase
         .from('orders')
-        .select('user_id')
+        .select('id, user_id')
         .eq('date', targetDate)
         .eq('vendor_id', vendorId)
         .eq('status', 'ordered');
@@ -1091,23 +1112,36 @@ async function showVendorDetail(vendorId, vendorName, targetDate) {
           userMap[u.user_id] = u.name || u.email || u.user_id;
         });
         
-        userNames = userIds.map(uid => userMap[uid] || uid).sort();
+        // 주문별로 사용자 정보 매핑
+        userOrders = (orders || []).map(order => ({
+          user_id: order.user_id,
+          name: userMap[order.user_id] || order.user_id,
+          order_id: order.id
+        })).sort((a, b) => a.name.localeCompare(b.name));
       }
     }
     
     // 총 인원 수 업데이트
-    modalTotalCount.textContent = `총 ${userNames.length}명`;
+    modalTotalCount.textContent = `총 ${userOrders.length}명`;
     
-    // 주문자 목록 렌더링
-    if (userNames.length === 0) {
+    // 주문자 목록 렌더링 (관리자만 취소 버튼 표시)
+    if (userOrders.length === 0) {
       modalUserList.innerHTML = '<div class="text-center py-8 text-slate-500">주문자가 없습니다</div>';
     } else {
-      modalUserList.innerHTML = userNames.map((name, idx) => 
-        `<div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-          <span class="flex items-center justify-center w-8 h-8 rounded-full bg-brand text-white font-bold text-sm">${idx + 1}</span>
-          <span class="font-medium text-slate-800">${name}</span>
-        </div>`
-      ).join('');
+      const isAdmin = currentUser && currentUser.role === 'admin';
+      modalUserList.innerHTML = userOrders.map((item, idx) => {
+        const cancelBtn = isAdmin ? `
+          <button onclick="adminCancelOrder('${item.order_id}', '${item.user_id}', '${targetDate}')" 
+                  class="ml-auto px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition">
+            취소
+          </button>` : '';
+        return `
+          <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-brand text-white font-bold text-sm">${idx + 1}</span>
+            <span class="font-medium text-slate-800 flex-1">${item.name}</span>
+            ${cancelBtn}
+          </div>`;
+      }).join('');
     }
   } catch (err) {
     console.error('showVendorDetail exception:', err);
@@ -1116,8 +1150,53 @@ async function showVendorDetail(vendorId, vendorName, targetDate) {
   }
 }
 
-// 전역 함수로 등록 (onclick에서 사용)
-window.showVendorDetail = showVendorDetail;
+// 관리자 개별 주문 취소 (시간 제한 없음)
+async function adminCancelOrder(orderId, userId, date) {
+  if (!confirm('이 주문을 취소하시겠습니까?')) return;
+  
+  try {
+    if (USE_MOCK) {
+      const idx = MOCK.orders.findIndex(o => o.id === orderId || (o.user_id === userId && o.date === date));
+      if (idx !== -1) {
+        MOCK.orders.splice(idx, 1);
+        toast('주문이 취소되었습니다', 'success');
+      }
+    } else {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+      
+      if (error) {
+        toast(`취소 실패: ${error.message}`, 'error');
+        return;
+      }
+      toast('주문이 취소되었습니다', 'success');
+    }
+    
+    // 모달 새로고침
+    const vendorName = modalVendorName?.textContent || '';
+    const vendorId = window.__lastVendorId || '';
+    const targetDate = window.__lastTargetDate || date;
+    await showVendorDetail(vendorId, vendorName, targetDate);
+    
+    // 금일 주문 현황 새로고침
+    loadDailyOrders();
+  } catch (error) {
+    toast(`오류: ${error.message}`, 'error');
+  }
+}
+
+// 전역 함수로 등록
+window.adminCancelOrder = adminCancelOrder;
+
+// showVendorDetail 호출 시 정보 저장 (취소 후 새로고침용)
+const originalShowVendorDetail = showVendorDetail;
+window.showVendorDetail = async function(vendorId, vendorName, targetDate) {
+  window.__lastVendorId = vendorId;
+  window.__lastTargetDate = targetDate;
+  await originalShowVendorDetail(vendorId, vendorName, targetDate);
+};
 
 // Employee management
 async function loadEmployees() {
@@ -1153,6 +1232,281 @@ function renderEmployees(data) {
     employeeBody.appendChild(tr);
   });
 }
+
+// ========== 일괄 주문 관리 ==========
+
+// 일괄 주문 패널 초기화
+async function initBulkOrderPanel() {
+  bulkSelectedDate = '';
+  bulkSelectedEmployees.clear();
+  if (bulkDateInput) bulkDateInput.value = '';
+  if (bulkVendorSelect) bulkVendorSelect.value = '';
+  await loadBulkVendors();
+  await loadBulkEmployees();
+  updateBulkOrderButton();
+}
+
+// 업체 목록 로드
+async function loadBulkVendors() {
+  if (!bulkVendorSelect) return;
+  
+  let vendors = [];
+  if (USE_MOCK) {
+    vendors = MOCK.vendors;
+  } else {
+    const { data, error } = await supabase
+      .from('vendors')
+      .select('vendor_id, name')
+      .order('name');
+    if (error) {
+      console.error('loadBulkVendors error:', error);
+      return;
+    }
+    vendors = data || [];
+  }
+  
+  bulkVendorSelect.innerHTML = '<option value="">업체를 선택하세요</option>';
+  vendors.forEach(v => {
+    const option = document.createElement('option');
+    option.value = v.vendor_id;
+    option.textContent = `${v.name} (${v.vendor_id})`;
+    bulkVendorSelect.appendChild(option);
+  });
+}
+
+// 직원 목록 로드
+async function loadBulkEmployees() {
+  if (!bulkEmployeesList || !totalEmployeesCount) return;
+  
+  let employees = [];
+  if (USE_MOCK) {
+    employees = MOCK.employees;
+  } else {
+    const { data, error } = await supabase
+      .from('users')
+      .select('user_id, email, name')
+      .eq('role', 'employee')
+      .order('name');
+    if (error) {
+      console.error('loadBulkEmployees error:', error);
+      bulkEmployeesList.innerHTML = '<p class="text-sm text-red-500 py-4 text-center">직원 목록을 불러오는데 실패했습니다</p>';
+      return;
+    }
+    employees = data || [];
+  }
+  
+  totalEmployeesCount.textContent = employees.length;
+  renderBulkEmployees(employees);
+  updateBulkOrderButton();
+}
+
+// 직원 목록 렌더링
+function renderBulkEmployees(employees) {
+  if (!bulkEmployeesList) return;
+  
+  if (employees.length === 0) {
+    bulkEmployeesList.innerHTML = '<p class="text-sm text-slate-500 py-4 text-center">직원이 없습니다</p>';
+    return;
+  }
+  
+  bulkEmployeesList.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'grid grid-cols-2 md:grid-cols-3 gap-2';
+  
+  employees.forEach(emp => {
+    const label = document.createElement('label');
+    label.className = 'flex items-center gap-2 p-2 hover:bg-slate-100 rounded cursor-pointer';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'cursor-pointer';
+    checkbox.checked = bulkSelectedEmployees.has(emp.user_id);
+    checkbox.addEventListener('change', () => toggleBulkEmployee(emp.user_id));
+    
+    const span = document.createElement('span');
+    span.className = 'text-sm';
+    span.textContent = emp.name || emp.email;
+    
+    label.appendChild(checkbox);
+    label.appendChild(span);
+    grid.appendChild(label);
+  });
+  
+  bulkEmployeesList.appendChild(grid);
+}
+
+// 직원 선택 토글
+function toggleBulkEmployee(userId) {
+  if (bulkSelectedEmployees.has(userId)) {
+    bulkSelectedEmployees.delete(userId);
+  } else {
+    bulkSelectedEmployees.add(userId);
+  }
+  if (selectedEmployeesCount) {
+    selectedEmployeesCount.textContent = bulkSelectedEmployees.size;
+  }
+  updateBulkOrderButton();
+}
+
+// 전체 선택/해제
+function toggleAllBulkEmployees() {
+  if (!totalEmployeesCount || bulkEmployeesData.length === 0) return;
+  const total = bulkEmployeesData.length;
+  const checkboxes = bulkEmployeesList?.querySelectorAll('input[type="checkbox"]');
+  
+  if (!checkboxes || checkboxes.length === 0) return;
+  
+  const allSelected = bulkSelectedEmployees.size === total;
+  
+  // 모든 직원을 선택/해제
+  if (allSelected) {
+    bulkSelectedEmployees.clear();
+    checkboxes.forEach(cb => cb.checked = false);
+    if (toggleAllEmployeesBtn) toggleAllEmployeesBtn.textContent = '전체 선택';
+  } else {
+    bulkSelectedEmployees.clear();
+    checkboxes.forEach(cb => {
+      const userId = cb.dataset.userId;
+      if (userId) {
+        bulkSelectedEmployees.add(userId);
+        cb.checked = true;
+      }
+    });
+    if (toggleAllEmployeesBtn) toggleAllEmployeesBtn.textContent = '전체 해제';
+  }
+  
+  if (selectedEmployeesCount) {
+    selectedEmployeesCount.textContent = bulkSelectedEmployees.size;
+  }
+  updateBulkOrderButton();
+}
+
+// 일괄 주문 버튼 상태 업데이트
+function updateBulkOrderButton() {
+  if (!placeBulkOrdersBtn) return;
+  const isValid = bulkDateInput?.value && 
+                  bulkVendorSelect?.value && 
+                  bulkSelectedEmployees.size > 0;
+  placeBulkOrdersBtn.disabled = !isValid;
+}
+
+// 메시지 표시
+function showBulkOrderMsg(msg, type) {
+  if (!bulkOrderMsg) return;
+  bulkOrderMsg.textContent = msg;
+  bulkOrderMsg.className = 'text-sm';
+  if (type === 'error') {
+    bulkOrderMsg.classList.add('text-red-600');
+  } else if (type === 'success') {
+    bulkOrderMsg.classList.add('text-green-600');
+  } else {
+    bulkOrderMsg.classList.add('text-slate-600');
+  }
+}
+
+// 일괄 주문 실행 (관리자는 시간 제한 없음)
+async function placeBulkOrders() {
+  if (!bulkVendorSelect || !bulkVendorSelect.value) {
+    showBulkOrderMsg('업체를 선택하세요', 'error');
+    return;
+  }
+  if (!bulkDateInput || !bulkDateInput.value) {
+    showBulkOrderMsg('날짜를 선택하세요', 'error');
+    return;
+  }
+  if (bulkSelectedEmployees.size === 0) {
+    showBulkOrderMsg('주문할 직원을 선택하세요', 'error');
+    return;
+  }
+  
+  if (placeBulkOrdersBtn) {
+    placeBulkOrdersBtn.disabled = true;
+    placeBulkOrdersBtn.textContent = '처리 중...';
+  }
+  showBulkOrderMsg('주문 처리 중...', '');
+  
+  try {
+    const orders = [];
+    const vendorId = bulkVendorSelect.value;
+    const selectedDate = bulkDateInput.value;
+    
+    for (const userId of bulkSelectedEmployees) {
+      // 기존 주문 확인
+      let existing = null;
+      if (USE_MOCK) {
+        existing = MOCK.orders.find(o => o.date === selectedDate && o.user_id === userId && o.status === 'ordered');
+      } else {
+        const { data } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('date', selectedDate)
+          .eq('user_id', userId)
+          .eq('status', 'ordered')
+          .maybeSingle();
+        existing = data;
+      }
+      
+      if (!existing) {
+        orders.push({
+          date: selectedDate,
+          user_id: userId,
+          vendor_id: vendorId,
+          status: 'ordered'
+        });
+      }
+    }
+    
+    if (orders.length === 0) {
+      showBulkOrderMsg('생성할 새 주문이 없습니다 (모두 이미 주문됨)', 'error');
+      if (placeBulkOrdersBtn) {
+        placeBulkOrdersBtn.disabled = false;
+        placeBulkOrdersBtn.textContent = '일괄 주문 실행';
+      }
+      updateBulkOrderButton();
+      return;
+    }
+    
+    if (USE_MOCK) {
+      MOCK.orders.push(...orders);
+      showBulkOrderMsg(`성공: ${orders.length}개의 주문이 생성되었습니다`, 'success');
+    } else {
+      const { error } = await supabase.from('orders').insert(orders);
+      if (error) {
+        showBulkOrderMsg(`오류: ${error.message}`, 'error');
+        if (placeBulkOrdersBtn) {
+          placeBulkOrdersBtn.disabled = false;
+          placeBulkOrdersBtn.textContent = '일괄 주문 실행';
+        }
+        updateBulkOrderButton();
+        return;
+      }
+      showBulkOrderMsg(`성공: ${orders.length}개의 주문이 생성되었습니다`, 'success');
+    }
+    
+    // 초기화
+    bulkSelectedEmployees.clear();
+    if (bulkDateInput) bulkDateInput.value = '';
+    if (bulkVendorSelect) bulkVendorSelect.value = '';
+    await loadBulkEmployees();
+    updateBulkOrderButton();
+    if (toggleAllEmployeesBtn) toggleAllEmployeesBtn.textContent = '전체 선택';
+    
+    // 금일 주문 현황 새로고침
+    if (dailyDate) {
+      dailyDate.value = selectedDate;
+    }
+    loadDailyOrders();
+    
+  } catch (error) {
+    showBulkOrderMsg(`오류 발생: ${error.message}`, 'error');
+  } finally {
+    if (placeBulkOrdersBtn) {
+      placeBulkOrdersBtn.disabled = false;
+      placeBulkOrdersBtn.textContent = '일괄 주문 실행';
+    }
+    updateBulkOrderButton();
+  }
+}
+
 
 async function addEmployee() {
   const email = empUserId?.value?.trim();
@@ -1726,6 +2080,10 @@ function showPanel(name) {
   if (name === 'daily') {
     loadDailyOrders();
   }
+  // 일괄 주문 관리 패널을 선택했을 때 초기화
+  if (name === 'bulk-order') {
+    initBulkOrderPanel();
+  }
   // 직원 계정 관리 패널을 선택했을 때 자동 로드
   if (name === 'employees') {
     loadEmployees();
@@ -2184,6 +2542,12 @@ if (myStart && myEnd) {
 }
 if (searchReports) searchReports.addEventListener('click', loadReports);
 if (downloadCSV) downloadCSV.addEventListener('click', downloadReportsCSV);
+
+// 일괄 주문 이벤트 리스너
+if (bulkDateInput) bulkDateInput.addEventListener('change', updateBulkOrderButton);
+if (bulkVendorSelect) bulkVendorSelect.addEventListener('change', updateBulkOrderButton);
+if (toggleAllEmployeesBtn) toggleAllEmployeesBtn.addEventListener('click', toggleAllBulkEmployees);
+if (placeBulkOrdersBtn) placeBulkOrdersBtn.addEventListener('click', placeBulkOrders);
 
 // 로그인 버튼 이벤트 리스너
 if (loginBtn) {
