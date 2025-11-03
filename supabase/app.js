@@ -919,9 +919,20 @@ async function loadDailyOrders(targetDate) {
     const totalUsers = new Set(rows.map(r=>r.user_id)).size;
     if (dailyTotal) dailyTotal.textContent = totalUsers;
     if (dailyVendors) {
-      dailyVendors.innerHTML = entries.map(e => 
-        `<tr><td class="p-2">${e.vendor_name}</td><td class="p-2">${e.user_count}명</td></tr>`
-      ).join('');
+      dailyVendors.innerHTML = entries.map(e => {
+        // vendor_id 찾기 (vendor_name으로 역매핑)
+        const vendorId = MOCK.vendors.find(v => v.name === e.vendor_name)?.vendor_id || '';
+        return `<tr>
+          <td class="p-3 font-medium">${e.vendor_name}</td>
+          <td class="p-3">${e.user_count}명</td>
+          <td class="p-3">
+            <button onclick="showVendorDetail('${vendorId}', '${e.vendor_name}', '${targetDate}')" 
+                    class="px-3 py-1.5 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark active:scale-95 transition-transform font-medium">
+              상세 보기
+            </button>
+          </td>
+        </tr>`;
+      }).join('');
     }
   } else {
     // Supabase: 업체별 주문자 수 조회
