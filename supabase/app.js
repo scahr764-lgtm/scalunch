@@ -1301,10 +1301,10 @@ async function loadReports() {
     
     renderReportsPivot();
   } else {
-    // Supabase: 주문 데이터 조회 (날짜 필드 포함)
+    // Supabase: 주문 데이터 조회 (날짜 필드 포함) - 모든 필드 조회로 변경
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
-      .select('user_id, vendor_id, date')
+      .select('*') // 모든 필드 조회 (date 포함)
       .gte('date', start)
       .lte('date', end)
       .eq('status', 'ordered');
@@ -1318,9 +1318,16 @@ async function loadReports() {
     
     // 디버깅: 주문 데이터 확인
     console.log('Supabase orders 조회 결과:', orders);
-    console.log('첫 번째 주문 샘플:', orders && orders.length > 0 ? orders[0] : '없음');
-    if (orders && orders.length > 0 && !orders[0].date) {
-      console.error('첫 번째 주문에 date 필드가 없습니다:', orders[0]);
+    console.log('주문 개수:', orders ? orders.length : 0);
+    if (orders && orders.length > 0) {
+      console.log('첫 번째 주문 샘플 (전체):', JSON.stringify(orders[0], null, 2));
+      console.log('첫 번째 주문의 date 값:', orders[0].date);
+      console.log('첫 번째 주문의 모든 키:', Object.keys(orders[0]));
+      if (!orders[0].date) {
+        console.error('⚠️ 첫 번째 주문에 date 필드가 없습니다!');
+      }
+    } else {
+      console.warn('주문 데이터가 없습니다.');
     }
     
     // 사용자 정보 조회
