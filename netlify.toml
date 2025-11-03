@@ -1,11 +1,13 @@
+# Netlify 설정 - Supabase 도시락 주문 시스템
 [build]
-  command = "npm run build"
-  publish = ".next"
+  base = "supabase"
+  publish = "supabase"
+  command = "echo 'Static site - no build needed'"
 
-[functions]
-  node_bundler = "esbuild"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+# SPA 라우팅 지원 (모든 경로를 index.html로 리다이렉트)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 
