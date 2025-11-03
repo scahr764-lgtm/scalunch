@@ -126,6 +126,7 @@ const downloadCSV = document.getElementById('downloadCSV');
 const reportsBody = document.getElementById('reportsBody');
 
 let reportsData = []; // CSV 다운로드를 위한 데이터 저장
+let reportsRawData = []; // RAW DATA 저장 (이름, 날짜, 업체)
 
 let currentUser = null; // { id, email, role, name }
 const DEFAULT_CUTOFF = '10:30'; // TODO: 서버 연동 시 날짜별 마감시간 로드
@@ -1213,12 +1214,30 @@ async function loadReports() {
   reportsPivotData = {};
   reportsVendors = [];
   reportsData = [];
+  reportsRawData = []; // RAW DATA 초기화
   
   if (USE_MOCK) {
     // Mock: 주문 데이터에서 사용자별, 업체별 개수 집계
     const orders = MOCK.orders.filter(o => o.date >= start && o.date <= end && o.status === 'ordered');
     const users = MOCK.employees || [];
     const vmap = window.__vendorMap || {};
+    
+    // RAW DATA 수집 (이름, 날짜, 업체)
+    orders.forEach(o => {
+      const user = users.find(u => (u.user_id || u.email) === o.user_id) || { name: o.user_id, email: o.user_id };
+      const userName = user.name || user.email || o.user_id;
+      let vendorName = vmap[o.vendor_id];
+      if (!vendorName) {
+        const vendor = MOCK.vendors.find(v => v.vendor_id === o.vendor_id);
+        vendorName = vendor ? vendor.name : (o.vendor_id || '(미지정)');
+      }
+      
+      reportsRawData.push({
+        name: userName,
+        date: o.date,
+        vendor: vendorName
+      });
+    });
     
     // { user_id: { vendor_id: count } }
     const userVendorCounts = {};
@@ -1298,6 +1317,19 @@ async function loadReports() {
     const vmap = {};
     (vendors || []).forEach(v => { vmap[v.vendor_id] = v.name; });
     window.__vendorMap = { ...window.__vendorMap, ...vmap };
+    
+    // RAW DATA 수집 (이름, 날짜, 업체)
+    (orders || []).forEach(o => {
+      const user = userMap[o.user_id] || { name: o.user_id, email: o.user_id };
+      const userName = user.name || user.email || o.user_id;
+      const vendorName = vmap[o.vendor_id] || o.vendor_id || '(미지정)';
+      
+      reportsRawData.push({
+        name: userName,
+        date: o.date,
+        vendor: vendorName
+      });
+    });
     
     // 집계
     const userVendorCounts = {};
@@ -1409,12 +1441,21 @@ function downloadReportsCSV() {
     return;
   }
   
-  // CSV 헤더 (이름, 업체1, 업체2, ..., 합계)
+  // SheetJS가 로드되지 않았으면 경고
+  if (typeof XLSX === 'undefined') {
+    toast('Excel 라이브러리를 불러오는 중입니다. 잠시 후 다시 시도해주세요.', 'error');
+    return;
+  }
+  
+  // 워크북 생성
+  const wb = XLSX.utils.book_new();
+  
+  // === 첫 번째 시트: 피벗 테이블 ===
   const headers = ['이름', ...reportsVendors.sort(), '합계'];
   const userNames = Object.keys(reportsPivotData).sort();
   
-  // CSV 행 생성
-  const rows = userNames.map(userName => {
+  // 피벗 테이블 데이터 생성
+  const pivotRows = userNames.map(userName => {
     const userData = reportsPivotData[userName];
     let total = 0;
     const row = [userName];
@@ -1441,32 +1482,38 @@ function downloadReportsCSV() {
     totalRow.push(vendorTotal);
   });
   totalRow.push(grandTotal);
-  rows.push(totalRow);
+  pivotRows.push(totalRow);
   
-  // CSV 문자열 생성
-  const csvContent = [
-    headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(','),
-    ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-  ].join('\n');
+  // 피벗 테이블 워크시트 생성
+  const pivotData = [headers, ...pivotRows];
+  const ws1 = XLSX.utils.aoa_to_sheet(pivotData);
+  XLSX.utils.book_append_sheet(wb, ws1, '집계');
   
-  // BOM 추가 (한글 깨짐 방지)
-  const BOM = '\uFEFF';
-  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  // === 두 번째 시트: RAW DATA ===
+  // RAW DATA 헤더
+  const rawHeaders = ['이름', '날짜', '업체'];
   
-  // 다운로드
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
+  // RAW DATA 정렬 (이름순 → 날짜순)
+  const sortedRawData = [...reportsRawData].sort((a, b) => {
+    const nameCompare = a.name.localeCompare(b.name);
+    if (nameCompare !== 0) return nameCompare;
+    return a.date.localeCompare(b.date);
+  });
   
+  // RAW DATA 행 생성
+  const rawRows = sortedRawData.map(item => [item.name, item.date, item.vendor]);
+  const rawData = [rawHeaders, ...rawRows];
+  
+  // RAW DATA 워크시트 생성
+  const ws2 = XLSX.utils.aoa_to_sheet(rawData);
+  XLSX.utils.book_append_sheet(wb, ws2, 'RAW DATA');
+  
+  // Excel 파일 다운로드
   const start = reportStart?.value || 'start';
   const end = reportEnd?.value || 'end';
-  link.setAttribute('download', `집계_${start}_${end}.csv`);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  XLSX.writeFile(wb, `집계_${start}_${end}.xlsx`);
   
-  toast('CSV 파일이 다운로드되었습니다', 'success');
+  toast('Excel 파일이 다운로드되었습니다 (시트 2개: 집계, RAW DATA)', 'success');
 }
 
 // Init
