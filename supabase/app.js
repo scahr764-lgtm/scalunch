@@ -542,6 +542,21 @@ async function placeOrder() {
     return; 
   }
   
+  // 마감시간 체크 (오늘 날짜이고 마감시간 지났으면 주문/수정 불가)
+  const today = getLocalDateString();
+  if (d === today) {
+    const cutoff = DEFAULT_CUTOFF;
+    const now = new Date();
+    const [h, m] = cutoff.split(':').map(n => parseInt(n, 10));
+    const cutoffDate = new Date();
+    cutoffDate.setHours(h, m, 0, 0);
+    if (now > cutoffDate) {
+      empMsg.textContent = `${cutoff} (마감시간) 이후에는 주문을 수정할 수 없습니다`;
+      toast(`${cutoff} (마감시간) 이후에는 주문을 수정할 수 없습니다`, 'error');
+      return;
+    }
+  }
+  
   setLoading(orderBtn, true);
   if (USE_MOCK) {
     const existIdx = MOCK.orders.findIndex(o=>o.date===d && o.user_id===currentUser.id && o.status==='ordered');
@@ -647,11 +662,29 @@ async function placeOrder() {
   // invalidate myOrders cache and refresh
   CACHE.myOrders.ts = 0; CACHE.myOrders.key = ''; CACHE.myOrders.data = null;
   await loadMyOrders();
+  // 이번 달 통계도 새로고침
+  await loadMonthlyStats();
 }
 
 async function cancelOrder() {
   empMsg.textContent = '';
   const d = empDate.value; if (!d) return;
+  
+  // 마감시간 체크 (오늘 날짜이고 마감시간 지났으면 취소 불가)
+  const today = getLocalDateString();
+  if (d === today) {
+    const cutoff = DEFAULT_CUTOFF;
+    const now = new Date();
+    const [h, m] = cutoff.split(':').map(n => parseInt(n, 10));
+    const cutoffDate = new Date();
+    cutoffDate.setHours(h, m, 0, 0);
+    if (now > cutoffDate) {
+      empMsg.textContent = `${cutoff} (마감시간) 이후에는 취소할 수 없습니다`;
+      toast(`${cutoff} (마감시간) 이후에는 취소할 수 없습니다`, 'error');
+      return;
+    }
+  }
+  
   setLoading(orderBtn, true);
   if (USE_MOCK) {
     for (let i = MOCK.orders.length-1; i>=0; i--) {
@@ -674,10 +707,26 @@ async function cancelOrder() {
   CACHE.myOrders.ts = 0; CACHE.myOrders.key = ''; CACHE.myOrders.data = null;
   await loadMyOrders();
   await refreshToggleState();
+  // 이번 달 통계도 새로고침
+  await loadMonthlyStats();
 }
 
 // 내 주문 조회에서 취소하는 함수
 async function cancelMyOrder(orderDate, orderId) {
+  // 마감시간 체크 (오늘 날짜이고 마감시간 지났으면 취소 불가)
+  const todayDate = getLocalDateString();
+  if (orderDate === todayDate) {
+    const cutoff = DEFAULT_CUTOFF;
+    const now = new Date();
+    const [h, m] = cutoff.split(':').map(n => parseInt(n, 10));
+    const cutoffDate = new Date();
+    cutoffDate.setHours(h, m, 0, 0);
+    if (now > cutoffDate) {
+      toast(`${cutoff} (마감시간) 이후에는 취소할 수 없습니다`, 'error');
+      return;
+    }
+  }
+  
   if (!confirm(`날짜 ${orderDate}의 주문을 취소하시겠습니까?`)) return;
   
   if (USE_MOCK) {
@@ -724,14 +773,132 @@ async function cancelMyOrder(orderDate, orderId) {
   await loadMyOrders();
   
   // 오늘 날짜의 주문을 취소한 경우 토글 상태도 업데이트
-  const today = getLocalDateString();
-  if (orderDate === today) {
+  if (orderDate === todayDate) {
     await refreshToggleState();
   }
+  
+  // 이번 달 통계도 새로고침
+  await loadMonthlyStats();
 }
 
 // 전역 함수로 등록 (onclick에서 사용)
 window.cancelMyOrder = cancelMyOrder;
+
+// 이번 달 주문 통계 로드
+async function loadMonthlyStats() {
+  const monthlyStats = document.getElementById('monthlyStats');
+  if (!monthlyStats || !currentUser || !currentUser.id) return;
+  
+  try {
+    // 이번 달 시작일과 종료일 계산
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    
+    let orders = [];
+    
+    if (USE_MOCK) {
+      orders = MOCK.orders.filter(o => 
+        o.user_id === currentUser.id && 
+        o.date >= startDate && 
+        o.date <= endDate && 
+        o.status === 'ordered'
+      );
+    } else {
+      if (!supabase) {
+        monthlyStats.innerHTML = '<div class="text-center py-4 text-red-500">데이터베이스 연결 오류</div>';
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .select('date, vendor_id')
+        .eq('user_id', currentUser.id)
+        .eq('status', 'ordered')
+        .gte('date', startDate)
+        .lte('date', endDate);
+      
+      if (error) {
+        console.error('loadMonthlyStats error:', error);
+        monthlyStats.innerHTML = '<div class="text-center py-4 text-red-500">조회 중 오류가 발생했습니다</div>';
+        return;
+      }
+      
+      orders = data || [];
+    }
+    
+    // 업체별 주문 개수 계산
+    const vendorCounts = {};
+    let totalCount = 0;
+    
+    orders.forEach(order => {
+      const vendorId = order.vendor_id || '(미지정)';
+      vendorCounts[vendorId] = (vendorCounts[vendorId] || 0) + 1;
+      totalCount++;
+    });
+    
+    // 업체 이름 맵 가져오기
+    let vmap = window.__vendorMap || {};
+    if (Object.keys(vmap).length === 0) {
+      await loadVendors();
+      vmap = window.__vendorMap || {};
+    }
+    
+    // 업체별 통계 정렬 (주문 개수 많은 순)
+    const vendorEntries = Object.entries(vendorCounts)
+      .map(([vendorId, count]) => ({
+        vendorId,
+        vendorName: vmap[vendorId] || vendorId || '(미지정)',
+        count
+      }))
+      .sort((a, b) => b.count - a.count);
+    
+    // 통계 렌더링
+    if (totalCount === 0) {
+      monthlyStats.innerHTML = `
+        <div class="text-center py-8 text-slate-500">
+          <p class="text-lg mb-2">이번 달 주문이 없습니다</p>
+          <p class="text-sm">아직 주문한 내역이 없습니다</p>
+        </div>
+      `;
+    } else {
+      const monthName = now.toLocaleDateString('ko-KR', { month: 'long' });
+      monthlyStats.innerHTML = `
+        <div class="mb-6">
+          <div class="bg-gradient-to-r from-brand/10 to-brand-dark/10 rounded-xl p-4 border border-brand/20">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-slate-600 mb-1">${year}년 ${monthName}</p>
+                <p class="text-3xl font-bold text-brand">총 ${totalCount}개</p>
+              </div>
+              <div class="text-4xl">📊</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h5 class="font-semibold text-slate-700 mb-3 text-sm uppercase tracking-wide">업체별 주문 현황</h5>
+          <div class="space-y-2">
+            ${vendorEntries.map(entry => `
+              <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div class="flex items-center gap-3">
+                  <span class="w-2 h-2 rounded-full bg-brand"></span>
+                  <span class="font-medium text-slate-800">${entry.vendorName}</span>
+                </div>
+                <span class="px-3 py-1 bg-brand text-white rounded-full text-sm font-bold">${entry.count}개</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('loadMonthlyStats exception:', error);
+    monthlyStats.innerHTML = '<div class="text-center py-4 text-red-500">조회 중 오류가 발생했습니다</div>';
+  }
+}
 
 // My orders
 async function loadMyOrders() {
@@ -772,7 +939,7 @@ async function loadMyOrders() {
   
   if (USE_MOCK) {
     const rows = MOCK.orders
-      .filter(o=>o.user_id===currentUser.id && o.date>=s && o.date<=e && o.date>=today && o.status==='ordered')
+      .filter(o=>o.user_id===currentUser.id && o.date>=s && o.date<=e && o.status==='ordered')
       .sort((a,b)=>a.date.localeCompare(b.date)); // 오름차순 정렬
     if (rows.length > 0) {
             // 데스크톱: 테이블 형태 - 개선된 디자인
@@ -793,10 +960,35 @@ async function loadMyOrders() {
                   </span>
                 </td>
                 <td class="p-4">
-                  <button class="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm hover:shadow" 
-                          onclick="cancelMyOrder('${o.date}', '${mockId}')">
-                    ✕ 취소
-                  </button>
+                  ${(() => {
+                    const today = getLocalDateString();
+                    const isPast = o.date < today;
+                    const isToday = o.date === today;
+                    let canCancel = true;
+                    let cancelReason = '';
+                    if (isPast) {
+                      canCancel = false;
+                      cancelReason = '지난 날짜';
+                    } else if (isToday) {
+                      const cutoff = DEFAULT_CUTOFF;
+                      const now = new Date();
+                      const [h, m] = cutoff.split(':').map(n => parseInt(n, 10));
+                      const cutoffDate = new Date();
+                      cutoffDate.setHours(h, m, 0, 0);
+                      if (now > cutoffDate) {
+                        canCancel = false;
+                        cancelReason = '마감시간 지남';
+                      }
+                    }
+                    if (canCancel) {
+                      return `<button class="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm hover:shadow" 
+                              onclick="cancelMyOrder('${o.date}', '${mockId}')">
+                        ✕ 취소
+                      </button>`;
+                    } else {
+                      return `<span class="px-4 py-2 text-sm text-slate-400 italic">${cancelReason}</span>`;
+                    }
+                  })()}
                 </td>
               </tr>`;
             }).join('');
@@ -822,10 +1014,35 @@ async function loadMyOrders() {
                     ✓ 주문됨
                   </span>
                 </div>
-                <button class="w-full py-3 bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl font-bold hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm" 
-                        onclick="cancelMyOrder('${o.date}', '${mockId}')">
-                  ✕ 주문 취소
-                </button>
+                ${(() => {
+                  const today = getLocalDateString();
+                  const isPast = o.date < today;
+                  const isToday = o.date === today;
+                  let canCancel = true;
+                  let cancelReason = '';
+                  if (isPast) {
+                    canCancel = false;
+                    cancelReason = '지난 날짜';
+                  } else if (isToday) {
+                    const cutoff = DEFAULT_CUTOFF;
+                    const now = new Date();
+                    const [h, m] = cutoff.split(':').map(n => parseInt(n, 10));
+                    const cutoffDate = new Date();
+                    cutoffDate.setHours(h, m, 0, 0);
+                    if (now > cutoffDate) {
+                      canCancel = false;
+                      cancelReason = '마감시간 지남';
+                    }
+                  }
+                  if (canCancel) {
+                    return `<button class="w-full py-3 bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl font-bold hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm" 
+                            onclick="cancelMyOrder('${o.date}', '${mockId}')">
+                      ✕ 주문 취소
+                    </button>`;
+                  } else {
+                    return `<div class="w-full py-3 text-center text-slate-400 italic text-sm">${cancelReason}</div>`;
+                  }
+                })()}
               </div>`;
             }).join('');
             if (myOrdersBodyMobile) myOrdersBodyMobile.innerHTML = mobileHtml;
@@ -844,16 +1061,15 @@ async function loadMyOrders() {
         return;
       }
       // Supabase Auth를 사용하지 않으므로 currentUser.id를 직접 사용
-      // 시작일과 오늘 중 늦은 날짜 사용 (지난 날짜 제외)
-      const startDate = s > today ? s : today;
-      console.log('loadMyOrders: querying orders for user_id:', currentUser.id, 'date range:', startDate, 'to', e);
+      // 지난 날짜도 포함하여 조회
+      console.log('loadMyOrders: querying orders for user_id:', currentUser.id, 'date range:', s, 'to', e);
       
       const { data, error } = await supabase
         .from('orders')
         .select('id,date,vendor_id,status')
         .eq('user_id', currentUser.id)
         .eq('status', 'ordered')
-        .gte('date', startDate)
+        .gte('date', s)
         .lte('date', e);
       
       if (error) {
@@ -865,9 +1081,8 @@ async function loadMyOrders() {
         return;
       }
       
-      // 클라이언트 측에서 오늘 이후 날짜만 필터링하고 오름차순 정렬
+      // 오름차순 정렬
       const filteredData = (data || [])
-        .filter(o => o.date >= today)
         .sort((a, b) => a.date.localeCompare(b.date)); // 오름차순 정렬
       
       if (filteredData && filteredData.length > 0) {
@@ -888,10 +1103,35 @@ async function loadMyOrders() {
               </span>
             </td>
             <td class="p-4">
-              <button class="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm hover:shadow" 
-                      onclick="cancelMyOrder('${o.date}', '${o.id||''}')">
-                ✕ 취소
-              </button>
+              ${(() => {
+                const today = getLocalDateString();
+                const isPast = o.date < today;
+                const isToday = o.date === today;
+                let canCancel = true;
+                let cancelReason = '';
+                if (isPast) {
+                  canCancel = false;
+                  cancelReason = '지난 날짜';
+                } else if (isToday) {
+                  const cutoff = DEFAULT_CUTOFF;
+                  const now = new Date();
+                  const [h, m] = cutoff.split(':').map(n => parseInt(n, 10));
+                  const cutoffDate = new Date();
+                  cutoffDate.setHours(h, m, 0, 0);
+                  if (now > cutoffDate) {
+                    canCancel = false;
+                    cancelReason = '마감시간 지남';
+                  }
+                }
+                if (canCancel) {
+                  return `<button class="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm hover:shadow" 
+                          onclick="cancelMyOrder('${o.date}', '${o.id||''}')">
+                    ✕ 취소
+                  </button>`;
+                } else {
+                  return `<span class="px-4 py-2 text-sm text-slate-400 italic">${cancelReason}</span>`;
+                }
+              })()}
             </td>
           </tr>`;
         }).join('');
@@ -916,10 +1156,35 @@ async function loadMyOrders() {
                 ✓ 주문됨
               </span>
             </div>
-            <button class="w-full py-3 bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl font-bold hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm" 
-                    onclick="cancelMyOrder('${o.date}', '${o.id||''}')">
-              ✕ 주문 취소
-            </button>
+            ${(() => {
+              const todayDate = getLocalDateString();
+              const isPast = o.date < todayDate;
+              const isToday = o.date === todayDate;
+              let canCancel = true;
+              let cancelReason = '';
+              if (isPast) {
+                canCancel = false;
+                cancelReason = '지난 날짜';
+              } else if (isToday) {
+                const cutoff = DEFAULT_CUTOFF;
+                const now = new Date();
+                const [h, m] = cutoff.split(':').map(n => parseInt(n, 10));
+                const cutoffDate = new Date();
+                cutoffDate.setHours(h, m, 0, 0);
+                if (now > cutoffDate) {
+                  canCancel = false;
+                  cancelReason = '마감시간 지남';
+                }
+              }
+              if (canCancel) {
+                return `<button class="w-full py-3 bg-gradient-to-r from-red-50 to-rose-50 text-red-600 rounded-xl font-bold hover:from-red-100 hover:to-rose-100 active:scale-95 transition-all border border-red-200/50 shadow-sm" 
+                        onclick="cancelMyOrder('${o.date}', '${o.id||''}')">
+                  ✕ 주문 취소
+                </button>`;
+              } else {
+                return `<div class="w-full py-3 text-center text-slate-400 italic text-sm">${cancelReason}</div>`;
+              }
+            })()}
           </div>`;
         }).join('');
         if (myOrdersBodyMobile) myOrdersBodyMobile.innerHTML = mobileHtml;
@@ -2060,6 +2325,8 @@ function initApp() {
   if (currentUser.role === 'employee') {
     // 직원 모드일 때 자동으로 이번 주 주문 조회
     setTimeout(() => loadMyOrders().catch(err => console.error('initApp: loadMyOrders failed', err)), 200);
+    // 이번 달 통계 로드
+    setTimeout(() => loadMonthlyStats().catch(err => console.error('initApp: loadMonthlyStats failed', err)), 300);
   }
   updateCutoffBadge();
 }
